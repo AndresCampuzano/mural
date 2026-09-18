@@ -18,7 +18,7 @@ import XCTest
                 assessment: assessment, inputTokens: 100, outputTokens: 20))
         }
     }
-    private func ended(_ languageID: String = "es") -> SessionRecord {
+    private func ended(_ languageID: String = "ko") -> SessionRecord {
         var session = SessionRecord(languageID: languageID)
         session.append(Fragment(speaker: .user, text: "radio", startMS: 0, endMS: 1000))
         session.endedAt = .now
@@ -31,7 +31,7 @@ import XCTest
     }
 
     func testResetAndNewLanguageDoNotRedirectResultsToTheNewSession() async {
-        let old = ended(), new = ended("fr"), provider = Provider()
+        let old = ended(), new = ended("ja"), provider = Provider()
         var records = [old.id: old, new.id: new]
         var visible: SessionRecord? = old
         let queue = FinalAssessmentQueue(assess: provider.assess)

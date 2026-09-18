@@ -3,26 +3,15 @@
 **The language app you eventually delete.**
 
 <p align="center">
-  <img src="marketing/screenshots/iphone-17-spanish/01-hola.png" width="24%" alt="Mural greeting in Spanish with voice controls" />
-  <img src="marketing/screenshots/iphone-17-spanish/02-conversacion.png" width="24%" alt="Spanish café conversation with English meaning subtitles" />
-  <img src="marketing/screenshots/iphone-17-spanish/03-temas.png" width="24%" alt="Conversation themes for learning Spanish" />
-  <img src="marketing/screenshots/iphone-17-spanish/04-palabras.png" width="24%" alt="Spanish vocabulary with three levels of recall strength" />
+  <img src="marketing/screenshots/iphone-17-korean/01-greeting.png" width="24%" alt="Mural greeting in Korean with voice controls" />
+  <img src="marketing/screenshots/iphone-17-korean/02-conversation.png" width="24%" alt="Korean café conversation with English meaning subtitles" />
+  <img src="marketing/screenshots/iphone-17-korean/03-themes.png" width="24%" alt="Conversation themes for learning Korean" />
+  <img src="marketing/screenshots/iphone-17-korean/04-words.png" width="24%" alt="Korean vocabulary with three levels of recall strength" />
 </p>
 
-Mural is a native iPhone and Android app for learning through conversation. Speak to a warm, animated orb, follow the meaning when you need it, and practise words again in later conversations. Mural adjusts the challenge from the evidence in your replies.
+Mural is a native iPhone app for learning through conversation. Speak to a warm, animated orb, follow the meaning when you need it, and practise words again in later conversations. Mural adjusts the challenge from the evidence in your replies.
 
-Built with SwiftUI and Liquid Glass on iPhone, and Jetpack Compose on Android. Learning records stay on your device. This version connects directly to OpenAI using your own API key. It needs an internet connection, but no Mural account or running Mac.
-
-## Android
-
-A native Android client is available in [`apps/android/`](apps/android/README.md), with voice and written conversation, the same eight language modules, local learning records and iPhone-compatible JSON backups. Its interface is English, and Spanish on a phone set to Spanish. It runs on Android 8.0 or later and uses your own OpenAI API key stored with Android Keystore. The iPhone client remains available below.
-
-See the [Android installation/build guide](docs/run-on-android.md) and [Android verification record](verification/android-validation.md). Build a personal-install APK with Java 17 and Android SDK 36:
-
-```sh
-cd apps/android
-./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
-```
+Built with SwiftUI and Liquid Glass on iPhone. Learning records stay on your device. This version connects directly to OpenAI using your own API key. It needs an internet connection, but no Mural account or running Mac.
 
 ## Get started
 
@@ -83,9 +72,9 @@ A free Personal Team can run the app on your own phone; TestFlight and App Store
 - **A fresh start:** the Talk screen returns to its greeting 15 seconds after a conversation ends. Tap **New conversation** to reset immediately. Your saved conversations and learning remain.
 - **Local records:** export or import a JSON learning backup, delete a conversation, or delete all learning data from Settings.
 
-The modules teach Norwegian Bokmål with an Eastern Norwegian voice target, Spanish from Spain, international English, French from France, German from Germany, Italian from Italy, Brazilian Portuguese and Standard Mandarin with Simplified Chinese. Each language has its own conversation themes, teaching guidance and progress. Valid regional alternatives are accepted.
+The modules teach Korean as spoken in Seoul and Standard Japanese. Each language has its own conversation themes, teaching guidance and progress. Valid regional alternatives are accepted, and the interface itself stays in English.
 
-On iPhone, Mandarin includes optional pinyin in Talk, transcripts and word details. Chinese word lookup uses word boundaries, and the original characters remain available for copying from transcripts. Pinyin uses system dictionary readings; names, ambiguous words and tone changes in connected speech still need listening checks. Voice accent and teaching guidance are model instructions, and fluent-speaker review is still needed before making pronunciation or learning-effectiveness claims.
+Japanese includes optional romaji in Talk, transcripts and word details, and its word lookup uses dictionary word boundaries because Japanese is written without spaces. Korean needs neither: Hangul is written with spaces and sounds out letter by letter. Romaji comes from system dictionary readings, so it is a sounding-out aid rather than a pronunciation guide — kanji with more than one reading, long vowels and pitch accent still need listening checks. Voice accent and teaching guidance are model instructions, and fluent-speaker review is still needed before making pronunciation or learning-effectiveness claims.
 
 ## Privacy and API costs
 
@@ -97,7 +86,7 @@ OpenAI bills your project for voice, text and search. The app’s usage display 
 
 ## Planned public service
 
-Hosted free conversations and minute purchases are **not active**. Optional Google sign-in exists on iPhone; Android account integration is in progress. The [API foundation](services/api/README.md) contains identity verification, audited minute allowances and guest transfers, plus the earlier sandbox payment support. [Minute controls](docs/conversation-minutes.md) describe what is implemented and what remains disabled. Its runbook lists the remaining work before commercial activation. No shared provider key belongs in this repository or a distributed app binary.
+Hosted free conversations and minute purchases are **not active**. Optional Google sign-in exists on iPhone. The [API foundation](services/api/README.md) contains identity verification, audited minute allowances and guest transfers, plus the earlier sandbox payment support. [Minute controls](docs/conversation-minutes.md) describe what is implemented and what remains disabled. Its runbook lists the remaining work before commercial activation. No shared provider key belongs in this repository or a distributed app binary.
 
 A public TestFlight link and App Store listing are not yet available. [Release preparation](release/README.md) records the outstanding requirements.
 
@@ -117,21 +106,18 @@ xcodebuild -project apps/ios/Mural.xcodeproj -scheme Mural \
 
 For UI tests, create or select an iPhone 17 simulator in Xcode, then run **Product → Test**. The tests use in-memory fixtures and do not require an API key. More commands and preview options are in [the build guide](docs/build-and-test.md).
 
-The iPhone language release recorded on 13 September 2026 passed **70 core tests and 20 native UI tests**, including Mandarin pinyin, all four new onboarding choices and the largest accessibility text size. **79 backend tests** passed with an isolated PostgreSQL database and no skips. German, Italian, Brazilian Portuguese and Mandarin each passed a live iPhone check using synthetic typed replies and real voice output, meanings and word lookup. These checks do not establish human speech-recognition, pronunciation or correction quality. [Verification record](verification/validation.md)
-
-The Android release branch is being prepared separately. See [release progress](verification/android-release-progress.md) for its checks and remaining gates.
+The Korean and Japanese build recorded on 17 September 2026 passed **73 core tests and 17 native UI tests** on an iPhone 17 simulator, covering both onboarding choices, Japanese word segmentation and optional romaji, Korean whitespace word links, language switching, and the largest accessibility text size. Neither module has had a live device check or a proficient-speaker review, so nothing here establishes speech recognition, pronunciation, correction quality or teaching effectiveness. [Verification record](verification/validation.md)
 
 ## Code map
 
 | Directory | Contents |
 | --- | --- |
-| `apps/android/` | Native Kotlin/Compose Android client and tests |
 | `apps/ios/App/` | SwiftUI views, SwiftData storage, Keychain, WebRTC transport and API coordination |
 | `apps/ios/Core/` | Language modules, teaching policy, transcripts, vocabulary evidence and recall projection |
 | `apps/ios/Tests/` | Core learning and translation tests |
 | `apps/ios/UITests/` | Native interface tests |
-| `shared/` | API contracts and fixtures exercised by both native clients |
-| `scripts/` | Project generation, language export and compatibility checks |
+| `shared/` | API contracts and learning-archive fixtures used by the core tests |
+| `scripts/` | Xcode project generation and app-icon tooling |
 | `docs/` | Setup, build and language-module guides |
 | `release/` | Submission drafts and public-release checks |
 | `services/api/` | Account, billing and hosted-service foundation; see its runbook before deploying |

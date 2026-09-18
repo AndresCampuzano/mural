@@ -97,7 +97,7 @@ integration('installation renewal preserves spent allowance after token expiry a
   const f=await fixture();
   try {
     const installation=install(),guest=await f.guest(installation);
-    const live=await f.hosted.create(guest.guestID,randomUUID(),'v=0','es-ES');await f.finish(guest.guestID,live.sessionID,0);
+    const live=await f.hosted.create(guest.guestID,randomUUID(),'v=0','ko-KR');await f.finish(guest.guestID,live.sessionID,0);
     await f.db.query("UPDATE auth_sessions SET expires_at=now()-interval '1 second' WHERE account_id=$1",[guest.guestID]);
     await updateWelcomePolicy(f.db,{...await welcomePolicy(f.db),welcomeEnabled:false},'test-operator','Pause new grants');
     const renewed=await f.guest(installation);
@@ -116,7 +116,7 @@ integration('purchased minutes add to remaining free time and guest linking pres
   try {
     const installation=install(),guest=await f.guest(installation),member=await f.member();
     await f.purchase(member.accountID,'live');
-    const live=await f.hosted.create(guest.guestID,randomUUID(),'v=0','fr-FR');
+    const live=await f.hosted.create(guest.guestID,randomUUID(),'v=0','ja-JP');
     await assert.rejects(linkGuestMinutes(f.db,member.accountID,guest.accessToken),{code:'finish_guest_conversation_first'});
     await f.finish(guest.guestID,live.sessionID,37.123);
     const headers={...f.headers,authorization:`Bearer ${member.accessToken}`};
@@ -136,7 +136,7 @@ integration('an existing member login retires a duplicate guest without adding a
     const member=await f.member(),original=await f.guest();
     await linkGuestMinutes(f.db,member.accountID,original.accessToken);await f.purchase(member.accountID,'live');
     const duplicate=await f.guest();
-    const live=await f.hosted.create(duplicate.guestID,randomUUID(),'v=0','es-ES');
+    const live=await f.hosted.create(duplicate.guestID,randomUUID(),'v=0','ko-KR');
     await assert.rejects(linkGuestMinutes(f.db,member.accountID,duplicate.accessToken),{code:'finish_guest_conversation_first'});
     await f.finish(duplicate.guestID,live.sessionID,15);
     const before=await minuteBalance(f.db,member.accountID,true);
@@ -144,7 +144,7 @@ integration('an existing member login retires a duplicate guest without adding a
     assert.deepEqual(linked,{transferredMilliseconds:0,alreadyLinked:false,outcome:'member_trial_already_claimed'});
     assert.deepEqual(await linkGuestMinutes(f.db,member.accountID,duplicate.accessToken),{...linked,alreadyLinked:true});
     assert.deepEqual(await minuteBalance(f.db,member.accountID,true),before);
-    const own=await f.hosted.create(member.accountID,randomUUID(),'v=0','es-ES');await f.finish(member.accountID,own.sessionID,15);
+    const own=await f.hosted.create(member.accountID,randomUUID(),'v=0','ko-KR');await f.finish(member.accountID,own.sessionID,15);
     assert.equal((await minuteBalance(f.db,member.accountID,true)).availableMilliseconds,before.availableMilliseconds-15_000);
   }finally{await f.cleanup();}
 });
@@ -154,14 +154,14 @@ integration('public calls and earned teaching continue across old test caps with
   try {
     const member=await f.member();await f.gift(member.accountID,1_200_000);
     for(let attempt=0;attempt<2;attempt++) {
-      const live=await f.hosted.create(member.accountID,randomUUID(),'v=0','es-ES');
+      const live=await f.hosted.create(member.accountID,randomUUID(),'v=0','ko-KR');
       assert.equal(live.minimumChargeMilliseconds,15_000);
       const meaning=await f.helpers.request(member.accountID,live.sessionID,{requestID:randomUUID(),purpose:'meaning',instructions:'Translate.',input:'Hola.'});
       assert.equal(meaning.text,'Synthetic meaning.');
       await f.finish(member.accountID,live.sessionID,600);
     }
     assert.equal(f.creates,2);assert.equal(f.helperCalls,2);assert.equal((await minuteBalance(f.db,member.accountID,true)).availableMilliseconds,0);
-    await assert.rejects(f.hosted.create(member.accountID,randomUUID(),'v=0','es-ES'),{code:'insufficient_minutes'});
+    await assert.rejects(f.hosted.create(member.accountID,randomUUID(),'v=0','ko-KR'),{code:'insufficient_minutes'});
   }finally{await f.cleanup();}
 });
 
@@ -169,10 +169,10 @@ integration('an uncertain guest session blocks its owner while another funded ac
   const f=await fixture();
   try {
     const guest=await f.guest();f.failCreate=true;
-    await assert.rejects(f.hosted.create(guest.guestID,randomUUID(),'v=0','es-ES'),{code:'provider_session_unconfirmed'});
+    await assert.rejects(f.hosted.create(guest.guestID,randomUUID(),'v=0','ko-KR'),{code:'provider_session_unconfirmed'});
     f.failCreate=false;const member=await f.member();await f.gift(member.accountID,60_000);
-    await assert.rejects(f.hosted.create(guest.guestID,randomUUID(),'v=0','es-ES'),{code:'live_session_unresolved'});
-    const live=await f.hosted.create(member.accountID,randomUUID(),'v=0','es-ES');await f.finish(member.accountID,live.sessionID,15);
+    await assert.rejects(f.hosted.create(guest.guestID,randomUUID(),'v=0','ko-KR'),{code:'live_session_unresolved'});
+    const live=await f.hosted.create(member.accountID,randomUUID(),'v=0','ko-KR');await f.finish(member.accountID,live.sessionID,15);
     assert.equal((await minuteBalance(f.db,guest.guestID,true)).reservedMilliseconds,600_000);
     assert.equal((await minuteBalance(f.db,member.accountID,true)).availableMilliseconds,45_000);
   }finally{await f.cleanup();}
@@ -183,12 +183,12 @@ integration('sandbox consumption and refunds cannot hide or seize subsequently f
   try {
     const member=await f.member(),fake=await f.purchase(member.accountID,'test');
     assert.equal((await minuteBalance(f.db,member.accountID,true)).availableMilliseconds,0);
-    await assert.rejects(f.hosted.create(member.accountID,randomUUID(),'v=0','es-ES'),{code:'insufficient_minutes'});assert.equal(f.creates,0);
+    await assert.rejects(f.hosted.create(member.accountID,randomUUID(),'v=0','ko-KR'),{code:'insufficient_minutes'});assert.equal(f.creates,0);
     const test=await reserveMinutes(f.db,member.accountID,randomUUID(),1_800_000);await finishMinuteReservation(f.db,test,1_500_000);
     await f.purchase(member.accountID,'live');await fake.refund();
     assert.equal((await minuteBalance(f.db,member.accountID,true)).availableMilliseconds,1_800_000);
     assert.equal((await f.db.query('SELECT sandbox_balance_ms FROM minute_wallets WHERE account_id=$1',[member.accountID])).rows[0].sandbox_balance_ms,'0');
-    const live=await f.hosted.create(member.accountID,randomUUID(),'v=0','es-ES');await f.finish(member.accountID,live.sessionID,60);
+    const live=await f.hosted.create(member.accountID,randomUUID(),'v=0','ko-KR');await f.finish(member.accountID,live.sessionID,60);
     assert.equal((await minuteBalance(f.db,member.accountID,true)).availableMilliseconds,1_740_000);
     const journal=(await f.db.query('SELECT sum(sandbox_delta_ms) FROM minute_entries WHERE account_id=$1',[member.accountID])).rows[0];
     assert.equal(journal.sum,'0');
@@ -199,7 +199,7 @@ integration('public settlement preserves sandbox balance and live refunds retain
   const f=await fixture();
   try {
     const member=await f.member();await f.purchase(member.accountID,'test');const funded=await f.purchase(member.accountID,'live');
-    const live=await f.hosted.create(member.accountID,randomUUID(),'v=0','es-ES');await funded.refund();await f.hosted.tick();
+    const live=await f.hosted.create(member.accountID,randomUUID(),'v=0','ko-KR');await funded.refund();await f.hosted.tick();
     assert.equal((await f.hosted.status(member.accountID,live.sessionID)).state,'closing');
     await f.finish(member.accountID,live.sessionID,60);
     assert.equal((await minuteBalance(f.db,member.accountID,true)).availableMilliseconds,0);
@@ -213,7 +213,7 @@ integration('ambiguous legacy sandbox balances require audited reconciliation wi
   try {
     const member=await f.member();await f.gift(member.accountID,60_000);
     await f.db.query('UPDATE minute_wallets SET sandbox_reconciled=false WHERE account_id=$1',[member.accountID]);
-    await assert.rejects(f.hosted.create(member.accountID,randomUUID(),'v=0','es-ES'),{code:'minute_balance_reconciliation_required'});
+    await assert.rejects(f.hosted.create(member.accountID,randomUUID(),'v=0','ko-KR'),{code:'minute_balance_reconciliation_required'});
     await reconcileSandboxMinutes(f.db,{accountID:member.accountID,expectedBalanceMilliseconds:60_000,sandboxMilliseconds:0,actor:'test-operator',reason:'Reviewed fully spent historical test grant'});
     assert.equal((await minuteBalance(f.db,member.accountID,true)).availableMilliseconds,60_000);
     await assert.rejects(f.db.query('DELETE FROM minute_sandbox_reconciliations'),/immutable/);
@@ -222,7 +222,7 @@ integration('ambiguous legacy sandbox balances require audited reconciliation wi
 
 integration('opt-in deferred login permits member gifts while guest closure remains pending and rejects new guest calls',async()=>{
  const f=await fixture(300,300);try{
-  const installation=install(),guest=await f.guest(installation),live=await f.hosted.create(guest.guestID,randomUUID(),'v=0','es-ES');
+  const installation=install(),guest=await f.guest(installation),live=await f.hosted.create(guest.guestID,randomUUID(),'v=0','ko-KR');
   const member=await f.member();await f.gift(member.accountID,1800000);
   const headers={...f.headers,authorization:`Bearer ${member.accessToken}`};
   const url='/v1/minutes/link-guest';
@@ -232,11 +232,11 @@ integration('opt-in deferred login permits member gifts while guest closure rema
    assert.equal((await f.app.inject({method:'POST',url,headers,payload})).statusCode,400);
   const accepted=await f.app.inject({method:'POST',url,headers,payload:{guestAccessToken:guest.accessToken,deferPending:true}});
   assert.equal(accepted.statusCode,200);assert.equal(accepted.json().pending,true);
-  await assert.rejects(f.hosted.create(guest.guestID,randomUUID(),'v=0','es-ES'),{code:'sign_in_to_continue'});
+  await assert.rejects(f.hosted.create(guest.guestID,randomUUID(),'v=0','ko-KR'),{code:'sign_in_to_continue'});
   assert.equal((await f.guest(installation)).reason,'sign_in_required');
   const guestRecord=(await f.db.query('SELECT close_requested_at,provider_cost_nano,reserved_ms FROM hosted_sessions WHERE id=$1',[live.sessionID])).rows[0];
   assert.ok(guestRecord.close_requested_at);assert.equal(guestRecord.provider_cost_nano,null);assert.equal(guestRecord.reserved_ms,'600000');
-  const own=await f.hosted.create(member.accountID,randomUUID(),'v=0','fr-FR');
+  const own=await f.hosted.create(member.accountID,randomUUID(),'v=0','ja-JP');
   assert.equal((await f.app.inject({method:'POST',url,headers,payload:{deferPending:true,guestAccountID:guest.guestID}})).json().pending,true);
   await f.finish(guest.guestID,live.sessionID,37.123);
   // The member's separate active reservation must not block the old guest transfer.

@@ -125,7 +125,7 @@ struct TalkView: View {
                     guard url.scheme == "mural-word", let components = URLComponents(url: url, resolvingAgainstBaseURL: false), let word = components.queryItems?.first?.value else { return .discarded }
                     lookup = WordLookup(word: word, sentence: coordinator.caption); return .handled
                 }).accessibilityIdentifier("target-caption")
-            if coordinator.language.id == "zh" { PinyinHelp(text: coordinator.caption) }
+            ReadingHelp(text: coordinator.caption, language: coordinator.language)
             if coordinator.store.preferences.meaningVisible {
                 Text(coordinator.assistantPassage == nil ? MeaningLanguages.greeting(in: coordinator.store.preferences.meaningLanguage) : !coordinator.meaning.isEmpty ? coordinator.meaning : coordinator.translating ? "Finding the meaning…" : "")
                     .font(.subheadline).foregroundStyle(MuralColor.secondary).multilineTextAlignment(.center)
@@ -207,7 +207,7 @@ struct LookupView: View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 20) {
                 Text(item.word).font(.system(.largeTitle, design: .rounded, weight: .medium))
-                if coordinator.language.id == "zh" { PinyinHelp(text: item.word) }
+                ReadingHelp(text: item.word, language: coordinator.language)
                 Text(item.sentence).font(.title3).foregroundStyle(MuralColor.secondary)
                 if let explanation { Text(explanation).font(.body).textSelection(.enabled) }
                 else if let error { Text(error).foregroundStyle(MuralColor.secondary) }

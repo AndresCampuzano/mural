@@ -1,7 +1,7 @@
 import XCTest
 @testable import MuralCore
 
-/// Runs the same archive fixture as Android's CrossPlatformFixtureTest so both cores stay interchangeable.
+/// Pins archive decoding, learner projection and redirect decisions against the shared golden fixtures.
 final class CrossPlatformFixtureTests: XCTestCase {
     private let directory = URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent("../../../shared/fixtures/cross-platform")
 

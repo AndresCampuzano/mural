@@ -2,6 +2,11 @@ import XCTest
 @testable import MuralCore
 
 final class LanguageTests: XCTestCase {
+    private static let samples = [
+        "ko": (text: "커피를 마셔요.", lemma: "마시다", meaning: "to drink", form: "마셔요"),
+        "ja": (text: "コーヒーを飲みます。", lemma: "飲む", meaning: "to drink", form: "飲みます")
+    ]
+
     func testExistingArchivesRequireConsentAndAcceptedVersionRoundTrips() throws {
         var archive = Archive()
         archive.preferences.hasOnboarded = true
@@ -11,64 +16,82 @@ final class LanguageTests: XCTestCase {
         archive.preferences.aiConsentVersion = 1
         XCTAssertEqual(try Archive.decode(archive.encoded()).preferences.aiConsentVersion, 1)
     }
+
     private func evidence(languageID: String, day: Int = 0, supported: Bool = false) -> SessionRecord {
+        let sample = Self.samples[languageID] ?? Self.samples["ko"]!
         let date = Date(timeIntervalSince1970: 1_780_000_000 + Double(day) * 86400)
         var session = SessionRecord(languageID: languageID, themeID: "coffee")
         session.startedAt = date
-        session.append(Fragment(speaker: .user, text: "radio", startMS: 1000, endMS: 2000, receivedAt: date, meaningVisible: supported))
+        session.append(Fragment(speaker: .user, text: sample.text, startMS: 1000, endMS: 2000, receivedAt: date, meaningVisible: supported))
         let passage = session.passages[0]
         session.assessments = [Assessment(passageID: passage.id, revisionKey: passage.revisionKey, outcome: .success,
-            suggestedLevel: 3, nextGoal: "A goal for \(languageID)", capability: "Describes a familiar object",
-            words: [WordProposal(lemma: "radio", meaning: "radio", form: "radio", kind: .independent, confidence: 0.95,
-                sourceIDs: passage.fragments.map(\.id), quote: "radio", language: languageID)], createdAt: date)]
+            suggestedLevel: 3, nextGoal: "A goal for \(languageID)", capability: "Describes a familiar action",
+            words: [WordProposal(lemma: sample.lemma, meaning: sample.meaning, form: sample.form, kind: .independent, confidence: 0.95,
+                sourceIDs: passage.fragments.map(\.id), quote: sample.text, language: languageID)], createdAt: date)]
         return session
     }
 
-    func testProgressAndVocabularyStayWithinTheirLanguage() {
-        let sessions = [evidence(languageID: "es"), evidence(languageID: "es", day: 2)]
-        let spanish = LearningEngine.project(sessions, languageID: "es", now: sessions[1].startedAt)
-        let norwegian = LearningEngine.project(sessions, languageID: "nb", now: sessions[1].startedAt)
-        XCTAssertEqual(spanish.challenge, 1)
-        XCTAssertEqual(spanish.words.first?.bars, 2)
-        XCTAssertEqual(norwegian.challenge, 0)
-        XCTAssertEqual(norwegian.observationCount, 0)
-        XCTAssertTrue(norwegian.words.isEmpty)
-        XCTAssertNotEqual(norwegian.nextGoal, "A goal for es")
+    func testRegisteredModulesAreKoreanAndJapaneseOnly() {
+        XCTAssertEqual(LanguageRegistry.all.map(\.id), ["ko", "ja"])
+        XCTAssertEqual(LanguageRegistry.defaultID, "ko")
+        XCTAssertNil(LanguageRegistry.module(for: "nb"))
+        XCTAssertNil(LanguageRegistry.module(for: "es"))
+        XCTAssertEqual(Preferences().learningLanguageID, "ko")
+        for (id, locale, greeting, native) in [("ko", "ko-KR", "안녕하세요!", "한국어"), ("ja", "ja-JP", "こんにちは！", "日本語")] {
+            XCTAssertEqual(LanguageRegistry.module(for: id)?.locale, locale)
+            XCTAssertEqual(LanguageRegistry.module(for: id)?.greeting, greeting)
+            XCTAssertEqual(LanguageRegistry.module(for: id)?.nativeName, native)
+        }
+        XCTAssertFalse(MeaningLanguages.all.contains("Norwegian"))
+        XCTAssertEqual(MeaningLanguages.all.first, "English")
+        XCTAssertEqual(MeaningLanguages.greeting(in: "English"), "Hi!")
     }
 
-    func testHidingACognateDoesNotHideItInAnotherLanguage() {
-        let sessions = [evidence(languageID: "nb"), evidence(languageID: "es")]
-        let spanishID = sessions[1].assessments[0].words[0].key
-        XCTAssertTrue(LearningEngine.project(sessions, languageID: "es", hiddenWords: [spanishID]).words.isEmpty)
-        XCTAssertEqual(LearningEngine.project(sessions, languageID: "nb", hiddenWords: [spanishID]).words.count, 1)
+    func testProgressAndVocabularyStayWithinTheirLanguage() {
+        let sessions = [evidence(languageID: "ko"), evidence(languageID: "ko", day: 2)]
+        let korean = LearningEngine.project(sessions, languageID: "ko", now: sessions[1].startedAt)
+        let japanese = LearningEngine.project(sessions, languageID: "ja", now: sessions[1].startedAt)
+        XCTAssertEqual(korean.challenge, 1)
+        XCTAssertEqual(korean.words.first?.bars, 2)
+        XCTAssertEqual(japanese.challenge, 0)
+        XCTAssertEqual(japanese.observationCount, 0)
+        XCTAssertTrue(japanese.words.isEmpty)
+        XCTAssertNotEqual(japanese.nextGoal, "A goal for ko")
+    }
+
+    func testHidingAWordDoesNotHideItInTheOtherLanguage() {
+        let sessions = [evidence(languageID: "ja"), evidence(languageID: "ko")]
+        let koreanID = sessions[1].assessments[0].words[0].key
+        XCTAssertTrue(LearningEngine.project(sessions, languageID: "ko", hiddenWords: [koreanID]).words.isEmpty)
+        XCTAssertEqual(LearningEngine.project(sessions, languageID: "ja", hiddenWords: [koreanID]).words.count, 1)
     }
 
     func testEvidenceInAnotherLanguageIsNeverCredited() {
         for kind in [EvidenceKind.independent, .assisted, .understanding, .exposure, .lapse] {
-            var session = evidence(languageID: "es")
-            session.assessments[0].words[0].language = "nb"
+            var session = evidence(languageID: "ko")
+            session.assessments[0].words[0].language = "ja"
             session.assessments[0].words[0].kind = kind
             XCTAssertTrue(LearningEngine.validate(session.assessments[0], session: session)!.words.isEmpty)
         }
     }
 
-    func testSpanishWithMeaningSupportIsAssisted() {
-        let session = evidence(languageID: "es", supported: true)
+    func testKoreanWithMeaningSupportIsAssisted() {
+        let session = evidence(languageID: "ko", supported: true)
         XCTAssertEqual(LearningEngine.validate(session.assessments[0], session: session)?.words.first?.kind, .assisted)
-        XCTAssertEqual(LearningEngine.project([session], languageID: "es").words.first?.independentCount, 0)
+        XCTAssertEqual(LearningEngine.project([session], languageID: "ko").words.first?.independentCount, 0)
     }
 
-    func testVersionOneMigrationPreservesNorwegianEvidenceAndHiddenWords() throws {
+    func testVersionOneMigrationAdoptsTheDefaultModuleAndKeepsHiddenWords() throws {
         var original = Archive()
-        var session = evidence(languageID: "nb")
-        session.topics = [TopicBrief(languageID: "nb", query: "weather", text: "En solrik dag.", sources: [])]
+        var session = evidence(languageID: "ko")
+        session.topics = [TopicBrief(languageID: "ko", query: "weather", text: "오늘은 날씨가 좋아요.", sources: [])]
         original.sessions = [session]
         original.preferences.hiddenWords = [session.assessments[0].words[0].key]
         var legacy = try JSONSerialization.jsonObject(with: original.encoded()) as! [String: Any]
         legacy["schemaVersion"] = 1
         var preferences = legacy["preferences"] as! [String: Any]
         preferences.removeValue(forKey: "learningLanguageID")
-        preferences["hiddenWords"] = ["radio|radio"]
+        preferences["hiddenWords"] = ["마시다|to drink"]
         legacy["preferences"] = preferences
         var oldSession = (legacy["sessions"] as! [[String: Any]])[0]
         oldSession.removeValue(forKey: "languageID")
@@ -77,11 +100,11 @@ final class LanguageTests: XCTestCase {
         oldSession["topics"] = [oldTopic]; legacy["sessions"] = [oldSession]
         let migrated = try Archive.decode(JSONSerialization.data(withJSONObject: legacy))
         XCTAssertEqual(migrated.schemaVersion, 2)
-        XCTAssertEqual(migrated.preferences.learningLanguageID, "nb")
+        XCTAssertEqual(migrated.preferences.learningLanguageID, "ko")
         XCTAssertEqual(migrated.preferences.hiddenWords, original.preferences.hiddenWords)
         XCTAssertEqual(migrated.sessions[0].id, session.id)
         XCTAssertEqual(migrated.sessions[0].fragments, session.fragments)
-        XCTAssertEqual(migrated.sessions[0].topics[0].languageID, "nb")
+        XCTAssertEqual(migrated.sessions[0].topics[0].languageID, "ko")
         XCTAssertEqual(migrated.sessions[0].topics[0].text, session.topics[0].text)
         XCTAssertEqual(LearningEngine.project(migrated.sessions).words.first?.independentCount, 1)
         XCTAssertTrue(LearningEngine.project(migrated.sessions, hiddenWords: migrated.preferences.hiddenWords).words.isEmpty)
@@ -90,16 +113,16 @@ final class LanguageTests: XCTestCase {
 
     func testBilingualArchiveRoundTripAndSelection() throws {
         var archive = Archive()
-        archive.preferences.learningLanguageID = "es"
-        archive.sessions = [evidence(languageID: "nb"), evidence(languageID: "es")]
+        archive.preferences.learningLanguageID = "ja"
+        archive.sessions = [evidence(languageID: "ko"), evidence(languageID: "ja")]
         let restored = try Archive.decode(archive.encoded())
-        XCTAssertEqual(restored.preferences.learningLanguageID, "es")
-        XCTAssertEqual(restored.sessions.map(\.languageID), ["nb", "es"])
-        XCTAssertEqual(LearningEngine.project(restored.sessions, languageID: "es").words.count, 1)
+        XCTAssertEqual(restored.preferences.learningLanguageID, "ja")
+        XCTAssertEqual(restored.sessions.map(\.languageID), ["ko", "ja"])
+        XCTAssertEqual(LearningEngine.project(restored.sessions, languageID: "ja").words.count, 1)
     }
 
     func testVersionTwoRequiresExplicitSupportedLanguage() throws {
-        var archive = Archive(); archive.sessions = [evidence(languageID: "es")]
+        var archive = Archive(); archive.sessions = [evidence(languageID: "ko")]
         var root = try JSONSerialization.jsonObject(with: archive.encoded()) as! [String: Any]
         var session = (root["sessions"] as! [[String: Any]])[0]
         session.removeValue(forKey: "languageID"); root["sessions"] = [session]
@@ -108,9 +131,20 @@ final class LanguageTests: XCTestCase {
         XCTAssertThrowsError(try Archive.decode(archive.encoded()))
     }
 
+    func testAnArchiveFromARemovedModuleIsRejectedRatherThanCrashing() throws {
+        var archive = Archive(); archive.sessions = [evidence(languageID: "ko")]
+        var root = try JSONSerialization.jsonObject(with: archive.encoded()) as! [String: Any]
+        var preferences = root["preferences"] as! [String: Any]
+        preferences["learningLanguageID"] = "nb"
+        root["preferences"] = preferences
+        XCTAssertThrowsError(try Archive.decode(JSONSerialization.data(withJSONObject: root))) {
+            XCTAssertEqual($0 as? ArchiveError, .unsupportedLanguage)
+        }
+    }
+
     func testTopicCannotBeAttachedToADifferentLanguage() throws {
-        var archive = Archive(); var session = SessionRecord(languageID: "es")
-        session.topics = [TopicBrief(languageID: "nb", query: "food", text: "Mat", sources: [])]
+        var archive = Archive(); var session = SessionRecord(languageID: "ko")
+        session.topics = [TopicBrief(languageID: "ja", query: "food", text: "ごはん", sources: [])]
         archive.sessions = [session]
         XCTAssertThrowsError(try Archive.decode(archive.encoded()))
     }
@@ -128,94 +162,70 @@ final class LanguageTests: XCTestCase {
         }
     }
 
-    func testSpanishFlowsUseSpanishPolicyAndCulturalContext() {
-        let language = LanguageModule.spanish
-        let learner = LearningEngine.project([], languageID: language.id)
-        let prompts = [TeachingPolicy.voice(language: language, learner: learner, theme: nil, interests: "", meaningLanguage: "English"),
-            TeachingPolicy.assessment(language: language), TeachingPolicy.greeting(language: language),
-            TeachingPolicy.help(language: language), TeachingPolicy.redirect(language: language),
-            TeachingPolicy.translation(language: language, meaningLanguage: "English"), TeachingPolicy.delegation(language: language),
-            TeachingPolicy.typedReply(language: language), TeachingPolicy.lookup(language: language, meaningLanguage: "English"),
-            TeachingPolicy.currentTopic(language: language)]
-        for prompt in prompts {
-            XCTAssertTrue(prompt.contains("Spanish"))
-            XCTAssertFalse(prompt.contains("Norwegian"))
-            XCTAssertFalse(prompt.contains("Bokmål"))
-        }
-        XCTAssertTrue(language.themes.allSatisfy { !$0.situation.contains("Norway") && !$0.situation.contains("Norwegian") })
-        XCTAssertEqual(language.locale, "es-ES")
-    }
-
-    func testEnglishAndFrenchHaveTargetLanguagePromptsWithoutEnglishSupportAssumptions() {
-        for language in [LanguageModule.english, .french] {
+    func testEachModuleDrivesEveryPromptWithoutLeakingTheOtherTarget() throws {
+        for language in LanguageRegistry.all {
+            let other = try XCTUnwrap(LanguageRegistry.all.first { $0.id != language.id })
             let learner = LearningEngine.project([], languageID: language.id)
-            let voice = TeachingPolicy.voice(language: language, learner: learner, theme: nil, interests: "", meaningLanguage: "Norwegian")
-            let typed = TeachingPolicy.typedReply(language: language)
-            let redirect = TeachingPolicy.redirect(language: language)
-            XCTAssertTrue(voice.contains("Speak ONLY \(language.name)."))
-            XCTAssertTrue(voice.contains("Meaning subtitles in Norwegian"))
-            XCTAssertTrue(typed.contains("Reply only in \(language.name)"))
-            XCTAssertTrue(redirect.contains("continue ONLY in \(language.name)"))
-            for prompt in [voice, typed, redirect] {
-                XCTAssertFalse(prompt.contains("Never translate into English"))
-                XCTAssertFalse(prompt.contains("Stop the English explanation"))
-                XCTAssertFalse(prompt.contains("no headings or English translation"))
+            let voice = TeachingPolicy.voice(language: language, learner: learner, theme: language.themes[0], interests: "", meaningLanguage: "English")
+            let assessment = TeachingPolicy.assessment(language: language)
+            let prompts = [voice, assessment, TeachingPolicy.greeting(language: language), TeachingPolicy.help(language: language),
+                TeachingPolicy.redirect(language: language), TeachingPolicy.translation(language: language, meaningLanguage: "English"),
+                TeachingPolicy.delegation(language: language), TeachingPolicy.typedReply(language: language),
+                TeachingPolicy.lookup(language: language, meaningLanguage: "English"), TeachingPolicy.currentTopic(language: language)]
+            for prompt in prompts {
+                XCTAssertTrue(prompt.contains(language.name), language.id)
+                XCTAssertFalse(prompt.contains(other.name), language.id)
+                XCTAssertFalse(prompt.contains("Norwegian"), language.id)
+                XCTAssertFalse(prompt.contains("Spanish"), language.id)
             }
-            XCTAssertTrue(TeachingPolicy.assessment(language: language).contains("Use language \(language.id) for target-language evidence"))
-            XCTAssertTrue(language.themes.allSatisfy { !$0.situation.contains("Norway") && !$0.situation.contains("Norwegian") })
+            XCTAssertTrue(voice.contains("Speak ONLY \(language.name)."))
+            XCTAssertTrue(voice.contains(language.speechGuidance))
+            XCTAssertTrue(voice.contains(language.writingGuidance))
+            XCTAssertTrue(voice.contains("Meaning subtitles in English"))
+            XCTAssertTrue(assessment.contains(language.lemmaGuidance))
+            XCTAssertTrue(assessment.contains("Use language \(language.id) for target-language evidence"))
+            XCTAssertTrue(TeachingPolicy.typedReply(language: language).contains("Reply only in \(language.name)"))
+            XCTAssertTrue(TeachingPolicy.redirect(language: language).contains("continue ONLY in \(language.name)"))
         }
-        XCTAssertEqual(LanguageRegistry.module(for: "en")?.greeting, "Hi!")
-        XCTAssertEqual(LanguageRegistry.module(for: "fr")?.greeting, "Salut !")
-        XCTAssertEqual(LanguageModule.french.locale, "fr-FR")
-        XCTAssertEqual(MeaningLanguages.greeting(in: "Norwegian"), "Hei!")
     }
 
-    func testEnglishIsProductionWhenEnglishIsTheTarget() {
-        let session = evidence(languageID: "en")
-        XCTAssertEqual(LearningEngine.validate(session.assessments[0], session: session)?.words.first?.kind, .independent)
-        XCTAssertEqual(LearningEngine.project([session], languageID: "en").words.first?.independentCount, 1)
-
-        var french = evidence(languageID: "fr")
-        french.assessments[0].words[0].language = "en"
-        XCTAssertTrue(LearningEngine.validate(french.assessments[0], session: french)!.words.isEmpty)
-    }
-
-    func testFourLanguageArchivePreservesSeparateProgressAndGlossaryKeys() throws {
+    func testBothLanguagesKeepSeparateProgressAndGlossaryKeys() throws {
         var archive = Archive()
-        archive.preferences.learningLanguageID = "fr"
-        archive.sessions = ["nb", "es", "en", "fr"].flatMap { [evidence(languageID: $0), evidence(languageID: $0, day: 2)] }
+        archive.preferences.learningLanguageID = "ja"
+        archive.sessions = ["ko", "ja"].flatMap { [evidence(languageID: $0), evidence(languageID: $0, day: 2)] }
         let restored = try Archive.decode(archive.encoded())
-        XCTAssertEqual(restored.preferences.learningLanguageID, "fr")
-        let keys = ["nb", "es", "en", "fr"].compactMap { id -> String? in
+        let keys = ["ko", "ja"].compactMap { id -> String? in
             let learner = LearningEngine.project(restored.sessions, languageID: id, now: restored.sessions.last!.startedAt)
-            XCTAssertEqual(learner.observationCount, 2)
-            XCTAssertEqual(learner.words.count, 1)
-            XCTAssertEqual(learner.words.first?.independentCount, 2)
-            XCTAssertEqual(learner.words.first?.bars, 2)
+            XCTAssertEqual(learner.observationCount, 2, id)
+            XCTAssertEqual(learner.words.count, 1, id)
+            XCTAssertEqual(learner.words.first?.independentCount, 2, id)
+            XCTAssertEqual(learner.words.first?.bars, 2, id)
             return learner.words.first?.id
         }
-        XCTAssertEqual(Set(keys).count, 4)
+        XCTAssertEqual(Set(keys).count, 2)
     }
 
-    func testFrenchEvidencePreservesAccentsAndElisions() throws {
-        var session = SessionRecord(languageID: "fr")
-        session.append(Fragment(speaker: .user, text: "J'ai déjà visité ce marché.", startMS: 1000, endMS: 3000))
-        let passage = session.passages[0]
-        session.assessments = [Assessment(passageID: passage.id, revisionKey: passage.revisionKey, outcome: .success,
-            suggestedLevel: 2, nextGoal: "Raconter une visite au marché.", capability: "Describes a past visit",
-            words: [WordProposal(lemma: "un marché", meaning: "market", form: "marché", kind: .independent, confidence: 0.95,
-                sourceIDs: passage.fragments.map(\.id), quote: "J'ai déjà visité ce marché.", language: "fr")])]
-        let accepted = try XCTUnwrap(LearningEngine.validate(session.assessments[0], session: session)?.words.first)
-        XCTAssertEqual(accepted.lemma, "un marché")
-        XCTAssertEqual(accepted.quote, "J'ai déjà visité ce marché.")
-        XCTAssertEqual(accepted.kind, .independent)
+    func testNativeScriptEvidenceSurvivesExportImportExactly() throws {
+        for (id, sample) in Self.samples {
+            var archive = Archive()
+            archive.preferences.learningLanguageID = id
+            archive.sessions = [evidence(languageID: id)]
+            let restored = try Archive.decode(archive.encoded())
+            let record = restored.sessions[0]
+            let word = try XCTUnwrap(LearningEngine.validate(record.assessments[0], session: record)?.words.first)
+            XCTAssertEqual(word.lemma, sample.lemma)
+            XCTAssertEqual(word.quote, sample.text)
+            XCTAssertEqual(word.kind, .independent)
+            XCTAssertEqual(record.passages[0].text, sample.text)
+        }
     }
 
     func testLanguageRedirectUsesTheSelectedTargetInsteadOfAnEnglishBlacklist() {
         for language in LanguageRegistry.all {
             XCTAssertFalse(TeachingPolicy.shouldRedirectSpeech(language: language, detectedLanguageID: language.id, confidence: 0.99))
-            let otherID = language.id == "en" ? "fr" : "en"
+            let otherID = language.id == "ko" ? "ja" : "ko"
             XCTAssertTrue(TeachingPolicy.shouldRedirectSpeech(language: language, detectedLanguageID: otherID, confidence: 0.99))
+            XCTAssertTrue(TeachingPolicy.shouldRedirectSpeech(language: language, detectedLanguageID: "en", confidence: 0.99))
             for confidence in [0.0, 0.88, .nan, .infinity, 1.1] {
                 XCTAssertFalse(TeachingPolicy.shouldRedirectSpeech(language: language, detectedLanguageID: otherID, confidence: confidence))
             }

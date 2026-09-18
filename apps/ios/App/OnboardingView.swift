@@ -21,7 +21,7 @@ struct OnboardingView: View {
         _hasChosenMeaning = State(initialValue: coordinator.store.preferences.meaningLanguage != Preferences().meaningLanguage)
     }
 
-    private var target: LanguageModule { LanguageRegistry.module(for: targetID) ?? .norwegian }
+    private var target: LanguageModule { LanguageRegistry.module(for: targetID) ?? .korean }
     private var greeting: String { reduceMotion ? target.greeting : LanguageRegistry.all[greetingIndex].greeting }
 
     var body: some View {
@@ -148,9 +148,7 @@ struct OnboardingView: View {
                 .accessibilityIdentifier("onboarding-meaning-picker")
             VStack(spacing: 8) {
                 Text(target.greeting).font(.system(.title2, design: .rounded, weight: .medium))
-                if target.id == "zh", let reading = MandarinPinyin.reading(target.greeting) {
-                    Text(reading).font(.callout).foregroundStyle(MuralColor.secondary)
-                }
+                ReadingHelp(text: target.greeting, language: target)
                 Text(MeaningLanguages.greeting(in: meaningLanguage)).font(.body).foregroundStyle(MuralColor.secondary)
                     .accessibilityIdentifier("onboarding-meaning-example")
                 Text("Turn meanings on whenever you need a hand.").font(.caption).foregroundStyle(MuralColor.secondary).padding(.top, 8)

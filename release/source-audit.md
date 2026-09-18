@@ -32,7 +32,7 @@ Publish from the directory containing `Package.swift`, keeping the following rel
 | `README.md`, `LICENSE`, `CONTRIBUTING.md`, `SECURITY.md`, `.gitignore` | Public project information |
 | `docs/`, `release/` | Technical guides and clearly labeled submission drafts |
 | `verification/validation.md` | Reviewed summary of completed tests and remaining limits |
-| `marketing/screenshots/iphone-17-spanish/` | Four reviewed simulator PNGs with synthetic Spanish learning content and their README |
+| `marketing/screenshots/iphone-17-korean/` | Four reviewed simulator PNGs with synthetic Korean learning content and their README |
 | `server/` | Tested account/billing foundation and deployment runbook; public funding remains disabled |
 | `.github/workflows/` | Core and server checks on standard GitHub-hosted runners |
 

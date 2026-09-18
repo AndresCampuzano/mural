@@ -1,22 +1,95 @@
 {
-  "description": "TeachingPolicy.shouldRedirectSpeech cases shared by MuralCore and the Android core.",
+  "description": "TeachingPolicy.shouldRedirectSpeech cases checked by MuralCore.",
   "cases": [
-    {"language": "zh", "detected": "zh", "confidence": 0.99, "redirect": false},
-    {"language": "zh", "detected": "zh-Hans", "confidence": 0.99, "redirect": false},
-    {"language": "zh", "detected": "zh-Hant", "confidence": 0.99, "redirect": false},
-    {"language": "zh", "detected": "zh-CN", "confidence": 0.99, "redirect": false},
-    {"language": "zh", "detected": "zh_TW", "confidence": 0.99, "redirect": false},
-    {"language": "zh", "detected": "ZH-HANS", "confidence": 0.99, "redirect": false},
-    {"language": "zh", "detected": "ja", "confidence": 0.99, "redirect": true},
-    {"language": "zh", "detected": "zhx", "confidence": 0.99, "redirect": true},
-    {"language": "pt", "detected": "pt-PT", "confidence": 0.99, "redirect": false},
-    {"language": "pt", "detected": "es", "confidence": 0.99, "redirect": true},
-    {"language": "es", "detected": "en", "confidence": 0.89, "redirect": true},
-    {"language": "es", "detected": "en", "confidence": 0.88, "redirect": false},
-    {"language": "es", "detected": "en", "confidence": 1.5, "redirect": false},
-    {"language": "es", "detected": "und", "confidence": 0.99, "redirect": false},
-    {"language": "es", "detected": "", "confidence": 0.99, "redirect": false},
-    {"language": "nb", "detected": "nb", "confidence": 0.99, "redirect": false},
-    {"language": "nb", "detected": "sv", "confidence": 0.95, "redirect": true}
+    {
+      "language": "ko",
+      "detected": "ko",
+      "confidence": 0.99,
+      "redirect": false
+    },
+    {
+      "language": "ko",
+      "detected": "ko-KR",
+      "confidence": 0.99,
+      "redirect": false
+    },
+    {
+      "language": "ko",
+      "detected": "KO",
+      "confidence": 0.99,
+      "redirect": false
+    },
+    {
+      "language": "ko",
+      "detected": "ja",
+      "confidence": 0.99,
+      "redirect": true
+    },
+    {
+      "language": "ko",
+      "detected": "kox",
+      "confidence": 0.99,
+      "redirect": true
+    },
+    {
+      "language": "ja",
+      "detected": "ja",
+      "confidence": 0.99,
+      "redirect": false
+    },
+    {
+      "language": "ja",
+      "detected": "ja-JP",
+      "confidence": 0.99,
+      "redirect": false
+    },
+    {
+      "language": "ja",
+      "detected": "ja_JP",
+      "confidence": 0.99,
+      "redirect": false
+    },
+    {
+      "language": "ja",
+      "detected": "ko",
+      "confidence": 0.99,
+      "redirect": true
+    },
+    {
+      "language": "ja",
+      "detected": "zh-Hans",
+      "confidence": 0.99,
+      "redirect": true
+    },
+    {
+      "language": "ko",
+      "detected": "en",
+      "confidence": 0.89,
+      "redirect": true
+    },
+    {
+      "language": "ko",
+      "detected": "en",
+      "confidence": 0.88,
+      "redirect": false
+    },
+    {
+      "language": "ko",
+      "detected": "en",
+      "confidence": 1.5,
+      "redirect": false
+    },
+    {
+      "language": "ko",
+      "detected": "und",
+      "confidence": 0.99,
+      "redirect": false
+    },
+    {
+      "language": "ja",
+      "detected": "",
+      "confidence": 0.99,
+      "redirect": false
+    }
   ]
 }

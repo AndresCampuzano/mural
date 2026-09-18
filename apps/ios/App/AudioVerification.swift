@@ -40,8 +40,8 @@ extension AudioVerification {
         let wasIdleTimerDisabled = UIApplication.shared.isIdleTimerDisabled
         UIApplication.shared.isIdleTimerDisabled = true
         defer { UIApplication.shared.isIdleTimerDisabled = wasIdleTimerDisabled }
-        if ProcessInfo.processInfo.arguments.contains("--record-spanish-demo") {
-            await recordSpanishDemo(coordinator)
+        if ProcessInfo.processInfo.arguments.contains("--record-korean-demo") {
+            await recordKoreanDemo(coordinator)
             return
         }
         if let argument = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix("--verify-language=") }) {
@@ -113,8 +113,8 @@ extension AudioVerification {
 
     // Explicit recording helper: real provider responses to two scripted typed
     // turns. It never changes the owner's learning record or exports their key.
-    @MainActor private static func recordSpanishDemo(_ coordinator: ConversationCoordinator) async {
-        coordinator.selectLanguage("es")
+    @MainActor private static func recordKoreanDemo(_ coordinator: ConversationCoordinator) async {
+        coordinator.selectLanguage("ko")
         coordinator.selectMeaningLanguage("English")
         coordinator.chooseTheme(ConversationTheme.shared.first { $0.id == "coffee" })
         coordinator.store.updatePreferences { $0.meaningVisible = true }
@@ -126,7 +126,7 @@ extension AudioVerification {
         report("ready")
         do { try await Task.sleep(for: .seconds(30)) } catch { return }
         coordinator.start()
-        defer { coordinator.end(reason: "Spanish recording demo") }
+        defer { coordinator.end(reason: "Korean recording demo") }
         let connectionDeadline = Date().addingTimeInterval(45)
         while coordinator.state == .connecting && Date() < connectionDeadline {
             do { try await Task.sleep(for: .milliseconds(100)) } catch { coordinator.end(reason: "Demo cancelled"); return }
@@ -147,7 +147,7 @@ extension AudioVerification {
         }
         var replies = 0
         if await waitForReply(after: coordinator.language.greeting) {
-            for line in ["Hola. Me gustaría tomar un café con leche.", "Yo quiere una tostada también, por favor."] {
+            for line in ["안녕하세요. 커피 한 잔 주세요.", "저는 빵도 먹고 싶어요, 부탁해요."] {
                 let previous = coordinator.caption
                 await coordinator.sendTyped(line)
                 guard await waitForReply(after: previous) else { break }
