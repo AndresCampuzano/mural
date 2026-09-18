@@ -15,23 +15,23 @@ import MuralCore
 
     static func seedWords(_ store: LearningStore) {
         let samples: [(lemma: String, meaning: String, form: String, quote: String, days: [Int])] = [
-            ("me apetece", "I feel like", "me apetece", "Hoy me apetece tomar un café.", [9, 4, 0]),
-            ("la sobremesa", "conversation after a meal", "sobremesa", "Me encanta la sobremesa con amigos.", [0]),
-            ("quedar", "to meet up", "quedar", "Podemos quedar el sábado.", [3, 0]),
-            ("pasear", "to go for a walk", "pasear", "Me gusta pasear por el barrio.", [9, 4, 0])
+            ("마시다", "to drink", "마셔요", "오늘은 커피를 마셔요.", [9, 4, 0]),
+            ("약속", "plan, appointment", "약속", "친구하고 약속이 있어요.", [0]),
+            ("만나다", "to meet", "만나요", "토요일에 만나요.", [3, 0]),
+            ("산책하다", "to take a walk", "산책해요", "동네를 산책해요.", [9, 4, 0])
         ]
         for (index, sample) in samples.enumerated() {
             for (visit, day) in sample.days.enumerated() {
                 let date = Date().addingTimeInterval(-Double(day) * 86400 - Double(index) * 60)
                 let context = visit.isMultiple(of: 2) ? "coffee" : "weekend"
-                var record = SessionRecord(languageID: "es", themeID: context)
+                var record = SessionRecord(languageID: "ko", themeID: context)
                 record.startedAt = date; record.endedAt = date.addingTimeInterval(60)
                 record.append(Fragment(speaker: .user, text: sample.quote, startMS: 0, endMS: 3000, receivedAt: date))
                 let passage = record.passages[0]
                 record.assessments = [Assessment(passageID: passage.id, revisionKey: passage.revisionKey,
-                    outcome: .success, suggestedLevel: 1, nextGoal: "Hablar de planes cotidianos.", capability: "",
+                    outcome: .success, suggestedLevel: 1, nextGoal: "일상 계획에 대해 이야기하기.", capability: "",
                     words: [WordProposal(lemma: sample.lemma, meaning: sample.meaning, form: sample.form,
-                        kind: .independent, confidence: 0.95, sourceIDs: passage.fragments.map(\.id), quote: sample.quote, language: "es")],
+                        kind: .independent, confidence: 0.95, sourceIDs: passage.fragments.map(\.id), quote: sample.quote, language: "ko")],
                     createdAt: date, context: context)]
                 store.save(record)
             }

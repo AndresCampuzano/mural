@@ -18,7 +18,7 @@ import XCTest
         var fragment = Fragment(id: passageID, speaker: .assistant, text: text, startMS: 0, endMS: 1000)
         fragment.revision = revision
         let passage = Passage(id: passageID, speaker: .assistant, fragments: [fragment])
-        return MeaningRequest(sessionID: sessionID, passage: passage, learningLanguageID: "nb", meaningLanguage: language)
+        return MeaningRequest(sessionID: sessionID, passage: passage, learningLanguageID: "ko", meaningLanguage: language)
     }
     private func waitUntil(_ condition: () -> Bool, file: StaticString = #filePath, line: UInt = #line) async {
         let deadline = Date().addingTimeInterval(2)

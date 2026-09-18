@@ -6,31 +6,31 @@ final class LearningTests: XCTestCase {
         let date = Date(timeIntervalSince1970: 1_780_000_000 + day * 86400)
         var s = SessionRecord(themeID: theme)
         s.startedAt = date
-        s.append(Fragment(id: UUID().uuidString, speaker: .user, text: "Jeg gikk i skogen.", startMS: 1000, endMS: 2000, receivedAt: date, meaningVisible: supported))
+        s.append(Fragment(id: UUID().uuidString, speaker: .user, text: "저는 숲에 갔어요.", startMS: 1000, endMS: 2000, receivedAt: date, meaningVisible: supported))
         let p = s.passages[0]
-        s.assessments = [Assessment(passageID: p.id, revisionKey: p.revisionKey, outcome: .success, suggestedLevel: 2, nextGoal: "Fortell mer.", capability: "Describes a past outing", words: [WordProposal(lemma: "å gå", meaning: "to go", form: "gikk", kind: kind, confidence: 0.95, sourceIDs: p.fragments.map(\.id), quote: "Jeg gikk i skogen.")], createdAt: date, context: theme)]
+        s.assessments = [Assessment(passageID: p.id, revisionKey: p.revisionKey, outcome: .success, suggestedLevel: 2, nextGoal: "더 이야기해 주세요.", capability: "Describes a past outing", words: [WordProposal(lemma: "가다", meaning: "to go", form: "갔어요", kind: kind, confidence: 0.95, sourceIDs: p.fragments.map(\.id), quote: "저는 숲에 갔어요.")], createdAt: date, context: theme)]
         return s
     }
     func testDuplicateProviderEventsDoNotChangeTranscript() {
         var s = SessionRecord()
-        let f = Fragment(id: "same", speaker: .user, text: "Hei", startMS: 0, endMS: 100)
+        let f = Fragment(id: "same", speaker: .user, text: "안녕", startMS: 0, endMS: 100)
         s.append(f); s.append(f)
         XCTAssertEqual(s.fragments.count, 1)
     }
     func testConcatenationPreservesExactProviderWhitespace() {
-        let f = [Fragment(id: "a", speaker: .assistant, text: "Hva", startMS: 0, endMS: 100), Fragment(id: "b", speaker: .assistant, text: " gjorde du?", startMS: 100, endMS: 400)]
-        XCTAssertEqual(Transcript.passages(f).first?.text, "Hva gjorde du?")
+        let f = [Fragment(id: "a", speaker: .assistant, text: "오늘", startMS: 0, endMS: 100), Fragment(id: "b", speaker: .assistant, text: " 뭐 했어요?", startMS: 100, endMS: 400)]
+        XCTAssertEqual(Transcript.passages(f).first?.text, "오늘 뭐 했어요?")
     }
     func testLateFragmentsRebuildEarlierPassageAndInvalidateEvidence() {
         var s = fixture()
-        s.append(Fragment(id: "late", speaker: .user, text: " kanskje", startMS: 2100, endMS: 2500))
+        s.append(Fragment(id: "late", speaker: .user, text: " 아마도", startMS: 2100, endMS: 2500))
         XCTAssertEqual(s.assessments.count, 0)
         XCTAssertEqual(s.passages.count, 1)
     }
     func testOverlappingSpeakersRemainSeparate() {
-        let fragments = [Fragment(speaker: .assistant, text: "Hei", startMS: 0, endMS: 500), Fragment(speaker: .user, text: "Hallo", startMS: 100, endMS: 400), Fragment(speaker: .assistant, text: "!", startMS: 500, endMS: 600)]
+        let fragments = [Fragment(speaker: .assistant, text: "안녕", startMS: 0, endMS: 500), Fragment(speaker: .user, text: "여보세요", startMS: 100, endMS: 400), Fragment(speaker: .assistant, text: "!", startMS: 500, endMS: 600)]
         let p = Transcript.passages(fragments)
-        XCTAssertEqual(p.count, 2); XCTAssertEqual(p[0].text, "Hei!"); XCTAssertEqual(p[1].text, "Hallo")
+        XCTAssertEqual(p.count, 2); XCTAssertEqual(p[0].text, "안녕!"); XCTAssertEqual(p[1].text, "여보세요")
     }
     func testVisibleMeaningCannotAwardIndependentRecall() {
         let s = fixture(supported: true)
@@ -40,10 +40,10 @@ final class LearningTests: XCTestCase {
     }
     func testImmediateImitationIsAssisted() {
         var s = fixture()
-        s.fragments.insert(Fragment(speaker: .assistant, text: "Du gikk en tur?", startMS: 0, endMS: 500), at: 0)
+        s.fragments.insert(Fragment(speaker: .assistant, text: "숲에 갔어요?", startMS: 0, endMS: 500), at: 0)
         XCTAssertEqual(LearningEngine.validate(s.assessments[0], session: s)?.words[0].kind, .assisted)
     }
-    func testEnglishCannotAwardNorwegianProduction() {
+    func testEnglishCannotAwardKoreanProduction() {
         var s = fixture(); s.assessments[0].words[0].language = "en"
         XCTAssertEqual(LearningEngine.validate(s.assessments[0], session: s)?.words.count, 0)
     }
@@ -54,7 +54,7 @@ final class LearningTests: XCTestCase {
     func testFabricatedSourceAndQuotesAreRejected() {
         var s = fixture(); s.assessments[0].words[0].sourceIDs = ["invented"]
         XCTAssertEqual(LearningEngine.validate(s.assessments[0], session: s)?.words.count, 0)
-        s = fixture(); s.assessments[0].words[0].quote = "Jeg kan fly."
+        s = fixture(); s.assessments[0].words[0].quote = "저는 날 수 있어요."
         XCTAssertEqual(LearningEngine.validate(s.assessments[0], session: s)?.words.count, 0)
     }
     func testDuplicateAssessmentsNeverDoubleCredit() {
@@ -163,5 +163,5 @@ final class LearningTests: XCTestCase {
         XCTAssertNil(SourceLink(title: "bad", url: "https://user@example.com/page").safeURL)
         XCTAssertNotNil(SourceLink(title: "good", url: "https://www.nrk.no/").safeURL)
     }
-    func testTwentyFourDistinctThemes() { XCTAssertEqual(Set(LanguageModule.norwegian.themes.map(\.id)).count, 24) }
+    func testTwentyFourDistinctThemes() { XCTAssertEqual(Set(LanguageModule.korean.themes.map(\.id)).count, 24) }
 }

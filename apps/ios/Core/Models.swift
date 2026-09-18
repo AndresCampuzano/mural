@@ -223,8 +223,8 @@ public struct Archive: Codable, Sendable {
                   s.topics.allSatisfy({ $0.languageID == s.languageID && validDate($0.retrievedAt) }) else { throw ArchiveError.invalid }
         }
     }
-    /// Version 1 was Norwegian-only. Migration assigns that provenance once;
-    /// version 2 records must explicitly declare their language.
+    /// Version 1 predates language modules. Migration assigns the default module
+    /// once; version 2 records must explicitly declare their language.
     private static func migrate(_ data: Data) throws -> Data {
         guard var root = try JSONSerialization.jsonObject(with: data) as? [String: Any],
               let version = root["schemaVersion"] as? Int else { throw ArchiveError.invalid }

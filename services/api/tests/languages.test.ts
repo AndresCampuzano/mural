@@ -17,20 +17,18 @@ test('all native locales reach the provider with the intended regional speech ta
     const address = server.address() as { port: number };
     const provider = new OpenAILiveProvider('test-no-real-provider-key', { testOrigin: `http://127.0.0.1:${address.port}` });
     for (const [locale, target] of [
-      ['nb-NO', 'Norwegian Bokmål'], ['es-ES', 'Spanish from Spain'], ['en-US', 'English'], ['fr-FR', 'French from France'],
-      ['de-DE', 'Standard German as spoken in Germany'], ['it-IT', 'Italian as spoken in Italy'],
-      ['pt-BR', 'Brazilian Portuguese'], ['zh-CN', 'Standard Mandarin with Simplified Chinese writing']
+      ['ko-KR', 'Korean as spoken in Seoul'], ['ja-JP', 'Standard Japanese as spoken in Tokyo']
     ]) {
       assert.equal(supportsLanguage(locale!), true, locale);
       await provider.create('v=0', locale!);
       assert.ok(requests.at(-1).session.instructions.includes(`Speak only ${target}`));
       assert.equal(requests.at(-1).session.store, false);
     }
-    for (const unsupported of ['pt-PT', 'de', 'zh', 'zh-TW', '__proto__', 'constructor', '']) {
+    for (const unsupported of ['ko', 'ja', 'ko-KP', 'ja-JP-u-ca-japanese', 'nb-NO', 'es-ES', '__proto__', 'constructor', '']) {
       assert.equal(supportsLanguage(unsupported), false);
       await assert.rejects(provider.create('v=0', unsupported), { code: 'invalid_language' });
     }
-    assert.equal(requests.length, 8);
+    assert.equal(requests.length, 2);
   } finally {
     await new Promise<void>(resolve => server.close(() => resolve()));
   }

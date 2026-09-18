@@ -338,7 +338,7 @@ import MuralCore
         }
         selectedTheme = language.themes.first { $0.id == "coffee" }
         var record = SessionRecord(languageID: language.id, themeID: selectedTheme?.id, title: selectedTheme?.title)
-        let sample = ["nb": "Jeg liker kaffe.", "de": "Ich mag Kaffee.", "it": "Mi piace il caffè.", "pt": "Eu gosto de café.", "zh": "我喜欢喝咖啡。"]
+        let sample = ["ko": "저는 커피를 좋아해요.", "ja": "コーヒーが好きです。"]
         record.append(Fragment(speaker: .assistant, text: sample[language.id] ?? language.greeting, startMS: 0, endMS: 1000))
         record.translations[MeaningRequest.cacheKey(revisionKey: record.passages[0].revisionKey, language: "English")] = "I like coffee."
         session = record; state = .closing; finish(final: true)
@@ -346,16 +346,16 @@ import MuralCore
     #endif
     #if DEBUG && targetEnvironment(simulator)
     func prepareScreenshot(_ screen: ScreenshotPreview.Screen) {
-        store.selectLanguage("es")
+        store.selectLanguage("ko")
         store.updatePreferences { $0.meaningVisible = true; $0.meaningLanguage = "English"; $0.hasOnboarded = true }
         if screen == .words { ScreenshotPreview.seedWords(store) }
         guard screen == .conversation else { return }
         selectedTheme = language.themes.first { $0.id == "coffee" }
-        var record = SessionRecord(languageID: "es", themeID: selectedTheme?.id, title: selectedTheme?.title)
-        record.append(Fragment(speaker: .user, text: "Un café con leche, por favor.", startMS: 0, endMS: 2200))
-        record.append(Fragment(speaker: .assistant, text: "¡Un café con leche! ¿Y algo para comer?", startMS: 2800, endMS: 6000))
+        var record = SessionRecord(languageID: "ko", themeID: selectedTheme?.id, title: selectedTheme?.title)
+        record.append(Fragment(speaker: .user, text: "커피 한 잔 주세요.", startMS: 0, endMS: 2200))
+        record.append(Fragment(speaker: .assistant, text: "커피 한 잔이요! 뭐 좀 드실래요?", startMS: 2800, endMS: 6000))
         let passage = record.passages.last!
-        record.translations[MeaningRequest.cacheKey(revisionKey: passage.revisionKey, language: "English")] = "A coffee with milk! And something to eat?"
+        record.translations[MeaningRequest.cacheKey(revisionKey: passage.revisionKey, language: "English")] = "One coffee! Would you like something to eat?"
         session = record; state = .active; outputLevel = 0.18
         scheduleTranslation()
     }

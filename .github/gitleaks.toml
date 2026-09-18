@@ -5,7 +5,7 @@ useDefault = true
 id = "generic-api-key"
 
 [[rules.allowlists]]
-description = "Reviewed SHA-256 source/report digests in two historical Android build manifests; not credentials."
+description = "Reviewed SHA-256 source/report digests in two build manifests that remain in Git history; not credentials."
 condition = "AND"
 paths = ['''(?:^|/)release/android/evidence/unsigned-candidate-build-(?:8768c86-)?2026-09-13\.json$''']
 regexTarget = "secret"

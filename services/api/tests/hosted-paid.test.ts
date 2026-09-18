@@ -64,7 +64,7 @@ async function fixture(options:{cash?:bigint;free?:number;paid?:boolean;cancel?:
     publicMinuteAccess:true,publicPaidAccess:options.paid??true,helpers:admission});
   await controller.start();
   return {account,voice,helpers,transport,controller,get attempts(){return attempts;},
-    create:(duration?:number)=>controller.create(account,randomUUID(),'v=0\r\noffer','es-ES',undefined,duration),
+    create:(duration?:number)=>controller.create(account,randomUUID(),'v=0\r\noffer','ko-KR',undefined,duration),
     async emit(session:{sessionID:string;providerSessionID:string},seconds:number,final=false) {
       voice.send(session.providerSessionID,seconds,final);
       await until(async()=> {const row=(await db!.query('SELECT observed_ms,state FROM hosted_sessions WHERE id=$1',[session.sessionID])).rows[0];
@@ -250,13 +250,13 @@ integration('the restricted runtime settles paid helpers while provenance and fu
     await hosted.start();
     f.voice.rejection=true;
     const before=await f.balance();
-    await assert.rejects(hosted.create(f.account,randomUUID(),'v=0','es-ES'),{code:'provider_create_rejected'});
+    await assert.rejects(hosted.create(f.account,randomUUID(),'v=0','ko-KR'),{code:'provider_create_rejected'});
     assert.deepEqual(await f.balance(),before);await f.invariant();
     const rejected=(await db!.query('SELECT * FROM hosted_sessions WHERE provider_rejection_status IS NOT NULL')).rows[0];
     assert.equal(rejected.provider_rejection_status,429);assert.equal(rejected.state,'closed');
     assert.equal((await db!.query('SELECT cash_pool_nano FROM hosted_helper_sessions WHERE session_id=$1',[rejected.id])).rows[0].cash_pool_nano,'0');
     f.voice.rejection=false;
-    const session=await hosted.create(f.account,randomUUID(),'v=0\r\npaid-runtime','es-ES',undefined,60_000);
+    const session=await hosted.create(f.account,randomUUID(),'v=0\r\npaid-runtime','ko-KR',undefined,60_000);
     const request=input();await gateway.request(f.account,session.sessionID,request);await f.invariant();
     await assert.rejects(runtime.query('UPDATE wallets SET cash_provenance_verified=true'),/permission denied/);
     await assert.rejects(runtime.query("UPDATE hosted_sessions SET funding_mode='legacy'"),/immutable/);
@@ -276,7 +276,7 @@ integration('a legacy cash experiment quarantines only its owner before a later 
     await transaction(db!,sql=>appendEntry(sql,f.account,'legacy-sandbox','purchase',1_000_000_000n,0n,null,1_000_000_000n));
     legacy=new HostedVoice(db!,f.voice,{accountAllowlist:new Set([f.account]),lifetimeFundingCapNano:2_000_000_000n,billingUnit:'nanoUSD'});
     await legacy.start();
-    const session=await legacy.create(f.account,randomUUID(),'v=0\r\nlegacy','es-ES');
+    const session=await legacy.create(f.account,randomUUID(),'v=0\r\nlegacy','ko-KR');
     assert.equal((await f.balance()).cashProvenanceVerified,false);
     assert.equal((await paidAIBalance(db!,other)).cashProvenanceVerified,true);
     await f.emit(session,120,true);await legacy.stop();legacy=undefined;

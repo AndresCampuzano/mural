@@ -116,7 +116,7 @@ async function fixture(cap = 2_000_000_000n, minuteAllowance?: number, helperBud
 integration('minute admission reserves helpers before any provider call and rolls back an unfunded conversation', async () => {
   const f = await fixture(1_000_000_000n, 600_000, 60_000_000n);
   try {
-    await assert.rejects(f.controller.create(f.account, 'unfunded-helper-budget', 'v=0', 'es-ES'), { code: 'hosted_funding_cap_reached' });
+    await assert.rejects(f.controller.create(f.account, 'unfunded-helper-budget', 'v=0', 'ko-KR'), { code: 'hosted_funding_cap_reached' });
     assert.equal(f.creates, 0);
     assert.deepEqual(await f.minutes(), { balance_ms: '600000', reserved_ms: '0' });
     for (const table of ['hosted_sessions', 'hosted_helper_sessions', 'minute_reservations'])
@@ -128,7 +128,7 @@ integration('sign-out records a durable stop before revocation so a discarded be
   try {
     const token = randomBytes(32).toString('base64url'), authorization = `Bearer ${token}`;
     await f.db.query("INSERT INTO auth_sessions(id,account_id,token_hash,expires_at) VALUES($1,$2,$3,now()+interval '1 hour')", [randomUUID(), f.account, digest(token)]);
-    const live = await f.controller.create(f.account, 'sign-out-live-session', 'v=0', 'es-ES');
+    const live = await f.controller.create(f.account, 'sign-out-live-session', 'v=0', 'ko-KR');
     await signOut(f.db, authorization);
     await assert.rejects(authenticate(f.db, authorization), { code: 'sign_in_required' });
     const row = (await f.db.query('SELECT close_reason,close_requested_at FROM hosted_sessions WHERE id=$1', [live.sessionID])).rows[0];
@@ -142,21 +142,21 @@ integration('voice admission counts existing helper liability and activates its 
   const f = await fixture(1_000_000_000n, 1_200_000, 50_000_000n);
   try {
     f.setupDelay = 12_000;
-    const live = await f.controller.create(f.account, 'funded-helper-budget', 'v=0', 'es-ES');
+    const live = await f.controller.create(f.account, 'funded-helper-budget', 'v=0', 'ko-KR');
     const budget = (await f.db.query('SELECT * FROM hosted_helper_sessions WHERE session_id=$1', [live.sessionID])).rows[0];
     assert.equal(budget.budget_nano, '500000000'); assert.equal(budget.liability_nano, '500000000');
     assert.equal(budget.activation_pending, false);
     assert.equal(budget.expires_at.getTime(), new Date(live.deadline).getTime() + 120_000);
     f.send(live.providerSessionID, { type: 'session.closed', usage: { seconds: 15 } });
     await until(async () => (await f.controller.status(f.account, live.sessionID)).state === 'closed');
-    await assert.rejects(f.controller.create(f.account, 'must-include-helper-liability', 'v=0', 'es-ES'), { code: 'hosted_funding_cap_reached' });
+    await assert.rejects(f.controller.create(f.account, 'must-include-helper-liability', 'v=0', 'ko-KR'), { code: 'hosted_funding_cap_reached' });
     assert.equal(f.creates, 1); assert.equal((await f.minutes()).reserved_ms, '0');
   } finally { await f.cleanup(); }
 });
 integration('real HTTP/WebSocket adapter meters snapshots once, releases hold, and retains no conversation content', async () => {
   const f = await fixture();
   try {
-    const live = await f.controller.create(f.account, 'voice-request-one', 'v=0\r\nsensitive-offer', 'es-ES',
+    const live = await f.controller.create(f.account, 'voice-request-one', 'v=0\r\nsensitive-offer', 'ko-KR',
       { instructions: 'private-teaching-instructions', history: [{ type:'message', role:'user', content:[{type:'input_text',text:'private-history'}] }] });
     assert.equal((await f.wallet()).reserved_nano, '500000000');
     assert.equal((f.payloads[0] as any).session.store, false);
@@ -175,7 +175,7 @@ integration('real HTTP/WebSocket adapter meters snapshots once, releases hold, a
     const all = JSON.stringify(records);
     for (const marker of ['private-test-sentence', 'private-audio-marker', 'private-instructions', 'sensitive-offer', 'private-teaching-instructions', 'private-history']) assert.equal(all.includes(marker), false);
     assert.equal((await f.db.query("SELECT id FROM ledger WHERE kind='settle'")).rowCount, 1);
-    await assert.rejects(f.controller.create(f.account, 'voice-request-one', 'v=0', 'es-ES'), { code: 'live_request_already_created' });
+    await assert.rejects(f.controller.create(f.account, 'voice-request-one', 'v=0', 'ko-KR'), { code: 'live_request_already_created' });
     assert.equal(f.creates, 1);
   } finally { await f.cleanup(); }
 });
@@ -184,20 +184,20 @@ integration('concurrent starts and a second worker cannot create duplicate funde
   try {
     const second = new HostedVoice(f.db, f.provider, { accountAllowlist: new Set([f.account]), lifetimeFundingCapNano: 2_000_000_000n });
     await assert.rejects(second.start(), { code: 'voice_worker_already_running' });
-    const results = await Promise.allSettled([f.controller.create(f.account, 'same-offer-key', 'v=0', 'fr-FR'),
-      f.controller.create(f.account, 'same-offer-key', 'v=0', 'fr-FR'), f.controller.create(f.account, 'different-key', 'v=0', 'fr-FR')]);
+    const results = await Promise.allSettled([f.controller.create(f.account, 'same-offer-key', 'v=0', 'ja-JP'),
+      f.controller.create(f.account, 'same-offer-key', 'v=0', 'ja-JP'), f.controller.create(f.account, 'different-key', 'v=0', 'ja-JP')]);
     assert.equal(results.filter(result => result.status === 'fulfilled').length, 1); assert.equal(f.creates, 1);
   } finally { await f.cleanup(); }
 });
 integration('600-second deadline forces close and HTTP fallback; missing final usage keeps hold and blocks further funding', async () => {
   const f = await fixture();
   try {
-    const live = await f.controller.create(f.account, 'timeout-offer-key', 'v=0', 'nb-NO');
+    const live = await f.controller.create(f.account, 'timeout-offer-key', 'v=0', 'ko-KR');
     f.advance(600_001); await f.controller.tick(); await until(() => f.closes > 0);
     f.advance(21); await f.controller.tick(); assert.ok(f.hangups > 0);
     assert.equal((await f.controller.status(f.account, live.sessionID)).state, 'incomplete');
     assert.equal((await f.wallet()).reserved_nano, '500000000');
-    await assert.rejects(f.controller.create(f.account, 'next-offer-key', 'v=0', 'nb-NO'), { code: 'live_session_unresolved' });
+    await assert.rejects(f.controller.create(f.account, 'next-offer-key', 'v=0', 'ko-KR'), { code: 'live_session_unresolved' });
     f.send(live.providerSessionID, { type: 'session.closed', usage: { seconds: 601 } });
     await until(async () => (await f.controller.status(f.account, live.sessionID)).state === 'closed');
     const status = await f.controller.status(f.account, live.sessionID);
@@ -208,7 +208,7 @@ integration('600-second deadline forces close and HTTP fallback; missing final u
 integration('recovery reattaches the saved provider ID and closes without creating again', async () => {
   const f = await fixture();
   try {
-    const live = await f.controller.create(f.account, 'recovery-offer-key', 'v=0', 'en-US');
+    const live = await f.controller.create(f.account, 'recovery-offer-key', 'v=0', 'ko-KR');
     f.send(live.providerSessionID, { type: 'session.usage.updated', usage: { seconds: 30 } });
     await until(async () => (await f.controller.status(f.account, live.sessionID)).observedMilliseconds === 30_000);
     await f.restart(); assert.equal(f.creates, 1);
@@ -224,7 +224,7 @@ integration('a refund during speech triggers closure and reconciles usage withou
     const order = randomUUID();
     await f.db.query(`INSERT INTO checkout_orders(id,account_id,idempotency_key,product,currency,total_minor,credit_nano,stripe_price_id,stripe_session_id,payment_intent_id,state)
       VALUES($1,$2,$3,'seed','usd',230,'2000000000','price_fake','cs_fake','pi_fake','paid')`, [order, f.account, randomUUID()]);
-    const live = await f.controller.create(f.account, 'refund-offer-key', 'v=0', 'es-ES');
+    const live = await f.controller.create(f.account, 'refund-offer-key', 'v=0', 'ko-KR');
     await applyStripeEvent(f.db, { id: `evt_${randomUUID()}`, type: 'charge.refunded', livemode: false,
       data: { object: { id: 'ch_fake', payment_intent: 'pi_fake', amount_refunded: 230 } } } as unknown as Stripe.Event);
     f.seconds = 20; f.closeReplies = true; await f.controller.tick();
@@ -236,7 +236,7 @@ integration('a refund during speech triggers closure and reconciles usage withou
 integration('sideband loss never accepts client usage or releases the reservation on an HTTP hangup alone', async () => {
   const f = await fixture();
   try {
-    const live = await f.controller.create(f.account, 'loss-offer-key', 'v=0', 'es-ES');
+    const live = await f.controller.create(f.account, 'loss-offer-key', 'v=0', 'ko-KR');
     f.disconnect(live.providerSessionID);
     await until(async () => (await f.controller.status(f.account, live.sessionID)).state === 'incomplete');
     assert.equal((await f.wallet()).reserved_nano, '500000000');
@@ -249,12 +249,12 @@ integration('sideband loss never accepts client usage or releases the reservatio
 integration('operator allowlist and lifetime funding cap are enforced before a provider create', async () => {
   const f = await fixture(500_000_000n);
   try {
-    await assert.rejects(f.controller.create(randomUUID(), 'not-allowed-key', 'v=0', 'es-ES'), { code: 'hosted_voice_not_ready' });
+    await assert.rejects(f.controller.create(randomUUID(), 'not-allowed-key', 'v=0', 'ko-KR'), { code: 'hosted_voice_not_ready' });
     assert.equal(f.creates, 0);
-    const live = await f.controller.create(f.account, 'capped-first-key', 'v=0', 'es-ES');
+    const live = await f.controller.create(f.account, 'capped-first-key', 'v=0', 'ko-KR');
     f.send(live.providerSessionID, { type: 'session.closed', usage: { seconds: 600 } });
     await until(async () => (await f.controller.status(f.account, live.sessionID)).state === 'closed');
-    await assert.rejects(f.controller.create(f.account, 'capped-second-key', 'v=0', 'es-ES'), { code: 'hosted_funding_cap_reached' });
+    await assert.rejects(f.controller.create(f.account, 'capped-second-key', 'v=0', 'ko-KR'), { code: 'hosted_funding_cap_reached' });
     assert.equal(f.creates, 1);
   } finally { await f.cleanup(); }
 });
@@ -262,11 +262,11 @@ integration('uncertain billed creation is never retried and its hold survives wo
   const f = await fixture();
   try {
     f.rejectCreate = true;
-    await assert.rejects(f.controller.create(f.account, 'uncertain-key', 'v=0', 'es-ES'), { code: 'provider_session_unconfirmed' });
+    await assert.rejects(f.controller.create(f.account, 'uncertain-key', 'v=0', 'ko-KR'), { code: 'provider_session_unconfirmed' });
     assert.equal(f.creates, 1); assert.equal((await f.wallet()).reserved_nano, '500000000');
     await f.restart();
-    await assert.rejects(f.controller.create(f.account, 'uncertain-key', 'v=0', 'es-ES'), { code: 'live_request_already_created' });
-    await assert.rejects(f.controller.create(f.account, 'new-after-uncertain', 'v=0', 'es-ES'), { code: 'live_session_unresolved' });
+    await assert.rejects(f.controller.create(f.account, 'uncertain-key', 'v=0', 'ko-KR'), { code: 'live_request_already_created' });
+    await assert.rejects(f.controller.create(f.account, 'new-after-uncertain', 'v=0', 'ko-KR'), { code: 'live_session_unresolved' });
     assert.equal(f.creates, 1);
     const row = (await f.db.query('SELECT state,provider_session_id,charged_nano FROM hosted_sessions')).rows[0];
     assert.deepEqual(row, { state: 'incomplete', provider_session_id: null, charged_nano: null });
@@ -275,7 +275,7 @@ integration('uncertain billed creation is never retried and its hold survives wo
 integration('regressing final usage does not settle or refund a hold; trusted reconciliation can finish later', async () => {
   const f = await fixture();
   try {
-    const live = await f.controller.create(f.account, 'regressed-final-key', 'v=0', 'es-ES');
+    const live = await f.controller.create(f.account, 'regressed-final-key', 'v=0', 'ko-KR');
     f.send(live.providerSessionID, { type: 'session.usage.updated', usage: { seconds: 30 } });
     f.send(live.providerSessionID, { type: 'session.closed', usage: { seconds: 20 } });
     await until(async () => (await f.controller.status(f.account, live.sessionID)).state === 'incomplete');
@@ -289,7 +289,7 @@ integration('regressing final usage does not settle or refund a hold; trusted re
 integration('minute mode snapshots a 15-second minimum and settles it once from trusted final usage', async () => {
   const f = await fixture(2_000_000_000n, 90_000);
   try {
-    const live = await f.controller.create(f.account, 'minute-first-key', 'v=0', 'es-ES');
+    const live = await f.controller.create(f.account, 'minute-first-key', 'v=0', 'ko-KR');
     assert.equal(live.reservedMilliseconds, 90_000);
     assert.equal(live.minimumChargeMilliseconds, 15_000);
     assert.equal(live.billingPolicy, 'connected-time-15s-minimum-v1');
@@ -305,30 +305,30 @@ integration('minute mode snapshots a 15-second minimum and settles it once from 
     assert.equal(status.billingPolicy, 'connected-time-15s-minimum-v1');
     assert.equal(status.providerCostNanoUSD, '12500000');
     assert.equal((await f.db.query("SELECT 1 FROM minute_entries WHERE kind='settle'")).rowCount, 1);
-    await assert.rejects(f.controller.create(f.account, 'minute-first-key', 'v=0', 'es-ES'), { code: 'live_request_already_created' });
+    await assert.rejects(f.controller.create(f.account, 'minute-first-key', 'v=0', 'ko-KR'), { code: 'live_request_already_created' });
     assert.equal(f.creates, 1);
   } finally { await f.cleanup(); }
 });
 integration('minute deadline closes at the available remainder, keeps an uncertain hold, and absorbs cutoff overrun', async () => {
   const f = await fixture(2_000_000_000n, 20_000);
   try {
-    const live = await f.controller.create(f.account, 'minute-timeout-key', 'v=0', 'de-DE');
+    const live = await f.controller.create(f.account, 'minute-timeout-key', 'v=0', 'ja-JP');
     f.advance(20_001); await f.controller.tick(); await until(() => f.closes > 0);
     f.advance(21); await f.controller.tick(); assert.ok(f.hangups > 0);
     assert.deepEqual(await f.minutes(), { balance_ms: '20000', reserved_ms: '20000' });
-    await assert.rejects(f.controller.create(f.account, 'minute-next-key', 'v=0', 'de-DE'), { code: 'live_session_unresolved' });
+    await assert.rejects(f.controller.create(f.account, 'minute-next-key', 'v=0', 'ja-JP'), { code: 'live_session_unresolved' });
     f.send(live.providerSessionID, { type: 'session.closed', usage: { seconds: 21 } });
     await until(async () => (await f.controller.status(f.account, live.sessionID)).state === 'closed');
     assert.deepEqual(await f.minutes(), { balance_ms: '0', reserved_ms: '0' });
     assert.equal((await f.controller.status(f.account, live.sessionID)).chargedMilliseconds, 20_000);
-    await assert.rejects(f.controller.create(f.account, 'minute-empty-key', 'v=0', 'de-DE'), { code: 'insufficient_minutes' });
+    await assert.rejects(f.controller.create(f.account, 'minute-empty-key', 'v=0', 'ja-JP'), { code: 'insufficient_minutes' });
     assert.equal(f.creates, 1);
   } finally { await f.cleanup(); }
 });
 integration('minute-funded recovery closes the original provider session and settles its reservation once', async () => {
   const f = await fixture(2_000_000_000n, 1_800_000);
   try {
-    const live = await f.controller.create(f.account, 'minute-recovery-key', 'v=0', 'fr-FR');
+    const live = await f.controller.create(f.account, 'minute-recovery-key', 'v=0', 'ja-JP');
     assert.equal(live.reservedMilliseconds, 600_000);
     await f.restart(); assert.equal(f.creates, 1);
     f.send(live.providerSessionID, { type: 'session.closed', usage: { seconds: 40 } });
@@ -341,10 +341,10 @@ integration('minute mode never releases a hold after an uncertain provider creat
   const f = await fixture(2_000_000_000n, 60_000);
   try {
     f.rejectCreate = true;
-    await assert.rejects(f.controller.create(f.account, 'minute-uncertain-key', 'v=0', 'it-IT'), { code: 'provider_session_unconfirmed' });
+    await assert.rejects(f.controller.create(f.account, 'minute-uncertain-key', 'v=0', 'ja-JP'), { code: 'provider_session_unconfirmed' });
     await f.restart();
     assert.deepEqual(await f.minutes(), { balance_ms: '60000', reserved_ms: '60000' });
-    await assert.rejects(f.controller.create(f.account, 'minute-uncertain-key', 'v=0', 'it-IT'), { code: 'live_request_already_created' });
+    await assert.rejects(f.controller.create(f.account, 'minute-uncertain-key', 'v=0', 'ja-JP'), { code: 'live_request_already_created' });
     assert.equal(f.creates, 1);
   } finally { await f.cleanup(); }
 });
@@ -352,7 +352,7 @@ integration('short minute remainders receive a separate setup window and authori
   const f = await fixture(2_000_000_000n, 2_000);
   try {
     f.setupDelay = 3_000;
-    const live = await f.controller.create(f.account, 'minute-short-setup', 'v=0', 'pt-BR');
+    const live = await f.controller.create(f.account, 'minute-short-setup', 'v=0', 'ko-KR');
     assert.equal(new Date(live.deadline).getTime() - f.now, 2_000);
     f.send(live.providerSessionID, { type: 'session.usage.updated', usage: { seconds: 2 } });
     await until(() => f.closes > 0);
@@ -365,7 +365,7 @@ integration('zero-second finalized sessions consume the minimum and cannot resta
   const f = await fixture(2_000_000_000n, 600_000, 50_000_000n);
   try {
     for (let index=0; index<40; index++) {
-      const live = await f.controller.create(f.account, `zero-duration-${index}`, 'v=0', 'es-ES');
+      const live = await f.controller.create(f.account, `zero-duration-${index}`, 'v=0', 'ko-KR');
       f.send(live.providerSessionID, { type: 'session.closed', usage: { seconds: 0 } });
       await until(async () => (await f.controller.status(f.account, live.sessionID)).state === 'closed');
       assert.equal((await f.controller.status(f.account, live.sessionID)).chargedMilliseconds, 15_000);
@@ -373,14 +373,14 @@ integration('zero-second finalized sessions consume the minimum and cannot resta
     assert.deepEqual(await f.minutes(), { balance_ms: '0', reserved_ms: '0' });
     assert.equal((await f.db.query('SELECT sum(provider_cost_nano) AS total FROM hosted_sessions')).rows[0].total, '500000000');
     assert.equal((await f.db.query('SELECT sum(liability_nano) AS total FROM hosted_helper_sessions')).rows[0].total, '500000000');
-    await assert.rejects(f.controller.create(f.account, 'zero-duration-exhausted', 'v=0', 'es-ES'), { code: 'insufficient_minutes' });
+    await assert.rejects(f.controller.create(f.account, 'zero-duration-exhausted', 'v=0', 'ko-KR'), { code: 'insufficient_minutes' });
     assert.equal(f.creates, 40);
   } finally { await f.cleanup(); }
 });
 integration('the final sub-minimum residue is charged once without a negative minute wallet', async () => {
   const f = await fixture(2_000_000_000n, 2_000, 50_000_000n);
   try {
-    const live = await f.controller.create(f.account, 'zero-small-residue', 'v=0', 'es-ES');
+    const live = await f.controller.create(f.account, 'zero-small-residue', 'v=0', 'ko-KR');
     assert.equal(live.minimumChargeMilliseconds, 15_000);
     f.send(live.providerSessionID, { type: 'session.closed', usage: { seconds: 0 } });
     await until(async () => (await f.controller.status(f.account, live.sessionID)).state === 'closed');
@@ -393,7 +393,7 @@ integration('pre-provider cancellation releases all funding and records no minim
   const f = await fixture(2_000_000_000n, 600_000, 50_000_000n);
   try {
     f.cancelBeforeProvider = true;
-    await assert.rejects(f.controller.create(f.account, 'cancel-before-attempt', 'v=0', 'es-ES'), { code: 'live_session_cancelled' });
+    await assert.rejects(f.controller.create(f.account, 'cancel-before-attempt', 'v=0', 'ko-KR'), { code: 'live_session_cancelled' });
     assert.equal(f.creates, 0);
     assert.deepEqual(await f.minutes(), { balance_ms: '600000', reserved_ms: '0' });
     const row = (await f.db.query('SELECT state,charged_ms,provider_cost_nano,funding_exposure_nano,provider_attempted_at FROM hosted_sessions')).rows[0];
@@ -422,12 +422,12 @@ integration('worker recovery cancels an admitted minute session that durably nev
 integration('a short close releases unearned helper liability before another conversation is admitted', async () => {
   const f = await fixture(1_000_000_000n, 600_000, 50_000_000n);
   try {
-    const first = await f.controller.create(f.account, 'earned-first', 'v=0', 'es-ES');
+    const first = await f.controller.create(f.account, 'earned-first', 'v=0', 'ko-KR');
     f.send(first.providerSessionID, { type: 'session.closed', usage: { seconds: 1 } });
     await until(async () => (await f.controller.status(f.account, first.sessionID)).state === 'closed');
     const budget = (await f.db.query('SELECT budget_nano,post_close_budget_nano,liability_nano FROM hosted_helper_sessions')).rows[0];
     assert.deepEqual(budget, { budget_nano:'500000000',post_close_budget_nano:'12500000',liability_nano:'12500000' });
-    const second = await f.controller.create(f.account, 'earned-second', 'v=0', 'es-ES');
+    const second = await f.controller.create(f.account, 'earned-second', 'v=0', 'ko-KR');
     assert.equal(second.reservedMilliseconds, 585_000);
     assert.equal(f.creates, 2);
   } finally { await f.cleanup(); }
@@ -435,7 +435,7 @@ integration('a short close releases unearned helper liability before another con
 integration('existing connected-time sessions retain their immutable original minimum policy', async () => {
   const f = await fixture(2_000_000_000n, 60_000);
   try {
-    const live = await f.controller.create(f.account, 'legacy-minute-policy', 'v=0', 'es-ES');
+    const live = await f.controller.create(f.account, 'legacy-minute-policy', 'v=0', 'ko-KR');
     await assert.rejects(f.db.query('UPDATE hosted_sessions SET minimum_charge_ms=0 WHERE id=$1', [live.sessionID]), /immutable/);
     // Represent a session that existed before migration014. Its copied policy must not be replaced on recovery.
     await f.db.query('ALTER TABLE hosted_sessions DISABLE TRIGGER hosted_minimum_immutable');
@@ -463,7 +463,7 @@ integration('refunding a minute purchase during speech closes and recovers relea
     evidence = { ...scope, orderID: order.orderID, transactionID: 'cs_minute_test', eventID: 'evt_paid', providerProduct: 'price_test',
       quantity: 1, currency: 'usd', totalMinor: 300, state: 'purchased', refundedMinor: 0 };
     await purchases.reconcile('stripe', {});
-    const live = await f.controller.create(f.account, 'minute-refund-live', 'v=0', 'en-US');
+    const live = await f.controller.create(f.account, 'minute-refund-live', 'v=0', 'ko-KR');
     evidence = { ...evidence, eventID: 'evt_refunded', refundedMinor: 300, state: 'voided' };
     await purchases.reconcile('stripe', {});
     assert.deepEqual(await f.minutes(), { balance_ms: '600000', reserved_ms: '600000' });
@@ -484,7 +484,7 @@ for (const mode of ['legacy', 'minutes', 'paid'] as const) {
     try {
       f.rejectCreate = true; f.rejectionStatus = 429;
       const before = mode === 'minutes' ? await f.minutes() : await f.wallet();
-      await assert.rejects(f.controller.create(f.account, 'explicit-rejection-key', 'v=0', 'es-ES'), {
+      await assert.rejects(f.controller.create(f.account, 'explicit-rejection-key', 'v=0', 'ko-KR'), {
         code: 'provider_create_rejected', providerStatus: 429, requestID: 'req_test_rejection'
       });
       assert.deepEqual(mode === 'minutes' ? await f.minutes() : await f.wallet(), before);
@@ -502,10 +502,10 @@ for (const mode of ['legacy', 'minutes', 'paid'] as const) {
         assert.equal(helper.cash_pool_nano, '0');
       }
       await assert.rejects(f.db.query('UPDATE hosted_sessions SET provider_rejection_status=NULL WHERE id=$1', [row.id]));
-      await assert.rejects(f.controller.create(f.account, 'explicit-rejection-key', 'v=0', 'es-ES'), { code: 'live_request_already_created' });
+      await assert.rejects(f.controller.create(f.account, 'explicit-rejection-key', 'v=0', 'ko-KR'), { code: 'live_request_already_created' });
       assert.equal(f.creates, 1);
       await f.restart(); f.rejectCreate = false;
-      const next = await f.controller.create(f.account, 'new-after-http-rejection', 'v=0', 'es-ES');
+      const next = await f.controller.create(f.account, 'new-after-http-rejection', 'v=0', 'ko-KR');
       assert.equal(f.creates, 2); assert.equal((await f.controller.status(f.account, next.sessionID)).state, 'active');
     } finally { await f.cleanup(); }
   });
@@ -517,7 +517,7 @@ for (const failure of ['timeout-status', 'server-status', 'transport', 'malforme
       f.rejectCreate = ['timeout-status', 'server-status'].includes(failure);
       f.rejectionStatus = failure === 'timeout-status' ? 408 : 503;
       f.dropCreate = failure === 'transport'; f.malformedSuccess = failure === 'malformed-success';
-      await assert.rejects(f.controller.create(f.account, 'uncertain-create-failure', 'v=0', 'es-ES'), { code: 'provider_session_unconfirmed' });
+      await assert.rejects(f.controller.create(f.account, 'uncertain-create-failure', 'v=0', 'ko-KR'), { code: 'provider_session_unconfirmed' });
       assert.equal((await f.minutes()).reserved_ms, '600000');
       const row = (await f.db.query('SELECT * FROM hosted_sessions')).rows[0];
       assert.equal(row.state, 'incomplete'); assert.equal(row.provider_rejection_status, null);
@@ -525,7 +525,7 @@ for (const failure of ['timeout-status', 'server-status', 'transport', 'malforme
       assert.equal(helper.liability_nano, '500000000'); assert.equal(helper.post_close_budget_nano, null);
       assert.equal(JSON.stringify(f.diagnostics).includes('private-'), false);
       await f.restart();
-      await assert.rejects(f.controller.create(f.account, 'blocked-new-offer', 'v=0', 'es-ES'), { code: 'live_session_unresolved' });
+      await assert.rejects(f.controller.create(f.account, 'blocked-new-offer', 'v=0', 'ko-KR'), { code: 'live_session_unresolved' });
       assert.equal(f.creates, 1);
     } finally { await f.cleanup(); }
   });
@@ -537,14 +537,14 @@ integration('a settlement database failure rolls back all releases and logs only
       BEGIN IF NEW.provider_rejection_status IS NOT NULL THEN RAISE EXCEPTION 'private-database-error'; END IF; RETURN NEW; END $$`);
     await f.db.query('CREATE TRIGGER reject_rejection_test BEFORE UPDATE ON hosted_sessions FOR EACH ROW EXECUTE FUNCTION reject_rejection_test()');
     f.rejectCreate = true; f.rejectionStatus = 400;
-    await assert.rejects(f.controller.create(f.account, 'rejected-but-db-fails', 'v=0', 'es-ES'), { code: 'provider_session_unconfirmed' });
+    await assert.rejects(f.controller.create(f.account, 'rejected-but-db-fails', 'v=0', 'ko-KR'), { code: 'provider_session_unconfirmed' });
     assert.deepEqual(await f.minutes(), { balance_ms: '600000', reserved_ms: '600000' });
     assert.equal((await f.db.query("SELECT count(*) AS total FROM minute_entries WHERE kind='settle'")).rows[0].total, '0');
     assert.equal((await f.db.query('SELECT state FROM minute_reservations')).rows[0].state, 'open');
     assert.equal((await f.db.query('SELECT liability_nano FROM hosted_helper_sessions')).rows[0].liability_nano, '500000000');
     assert.deepEqual(f.diagnostics.at(-1), { category: 'rejection_settlement_failed' });
     assert.equal(JSON.stringify(f.diagnostics).includes('private-'), false);
-    await assert.rejects(f.controller.create(f.account, 'db-failure-retry', 'v=0', 'es-ES'), { code: 'live_session_unresolved' });
+    await assert.rejects(f.controller.create(f.account, 'db-failure-retry', 'v=0', 'ko-KR'), { code: 'live_session_unresolved' });
   } finally { await f.cleanup(); }
 });
 test('rejection diagnostics reject unsafe metadata and never include provider body text', () => {
@@ -558,7 +558,7 @@ integration('an attach rejection after successful create keeps its confirmed pro
   const f = await fixture(2_000_000_000n, 600_000, 50_000_000n);
   try {
     f.provider.attach = async () => { throw new LiveCreateRejectedError(403, 'req_attach_rejection'); };
-    await assert.rejects(f.controller.create(f.account, 'attach-failure-offer', 'v=0', 'es-ES'), { code: 'provider_session_unconfirmed' });
+    await assert.rejects(f.controller.create(f.account, 'attach-failure-offer', 'v=0', 'ko-KR'), { code: 'provider_session_unconfirmed' });
     const row = (await f.db.query('SELECT * FROM hosted_sessions')).rows[0];
     assert.equal(row.provider_session_id, 'live_fake_1'); assert.equal(row.state, 'incomplete');
     assert.equal(row.provider_rejection_status, null); assert.equal((await f.minutes()).reserved_ms, '600000');
@@ -572,7 +572,7 @@ integration('the real HTTP adapter recognizes explicit client rejection status w
     f.rejectCreate = true;
     for (const status of [400, 401, 403, 404, 409, 422, 429]) {
       f.rejectionStatus = status;
-      await assert.rejects(f.provider.create('v=0', 'es-ES'), error => {
+      await assert.rejects(f.provider.create('v=0', 'ko-KR'), error => {
         assert.ok(error instanceof LiveCreateRejectedError); assert.equal(error.providerStatus, status);
         assert.equal(error.requestID, 'req_test_rejection');
         assert.equal(JSON.stringify(error).includes('private-provider-error'), false); return true;
@@ -591,7 +591,7 @@ integration('a late provider result cannot reopen a session closed by operator r
       await f.db.query("UPDATE hosted_sessions SET state='closed',charged_ms=0,close_reason='operator_funded_startup_recovery' WHERE account_id=$1", [f.account]);
       return result;
     };
-    await assert.rejects(f.controller.create(f.account, 'late-provider-result', 'v=0', 'es-ES'), { code: 'provider_session_unconfirmed' });
+    await assert.rejects(f.controller.create(f.account, 'late-provider-result', 'v=0', 'ko-KR'), { code: 'provider_session_unconfirmed' });
     const row = (await f.db.query('SELECT * FROM hosted_sessions')).rows[0];
     assert.equal(row.state, 'closed'); assert.equal(row.close_reason, 'operator_funded_startup_recovery');
     assert.equal(row.provider_session_id, null); assert.equal(f.hangups, 1);

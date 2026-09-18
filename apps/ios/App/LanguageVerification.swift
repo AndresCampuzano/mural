@@ -18,7 +18,8 @@ extension AudioVerification {
             var typedReplies = 0
             var translated = false
             var lookupReturned = false
-            var pinyinAvailable = false
+            var readingAidExpected = false
+            var readingAvailable = false
             var supportedEvidenceOnly = false
             var archiveRoundTrip = false
             var switchedAwayAndBack = false
@@ -30,13 +31,14 @@ extension AudioVerification {
             var failure: String?
             var passed: Bool {
                 connected && receivedGreeting && targetLanguageDetected && typedReplies == 2 && translated &&
-                lookupReturned && (languageID != "zh" || pinyinAvailable) && supportedEvidenceOnly &&
+                lookupReturned && (!readingAidExpected || readingAvailable) && supportedEvidenceOnly &&
                 archiveRoundTrip && switchedAwayAndBack && cachedMeaningAfterEnd && closed && audioReleased &&
                 peakAudioLevel > 0.001 && outputPorts.contains(AVAudioSession.Port.builtInSpeaker.rawValue) && failure == nil
             }
         }
         let id = coordinator.language.id
         var report = Report(languageID: id)
+        report.readingAidExpected = coordinator.language.readingAidName != nil
         let destination = URL.documentsDirectory.appendingPathComponent("language-verification-\(id).json")
         func write() {
             // Encode computed pass status explicitly alongside the report.
@@ -81,10 +83,8 @@ extension AudioVerification {
             await settleCaption()
             // One support-language beginner request, then a target-language question with more complex syntax.
             let advanced = [
-                "de": "Wenn du ein Café eröffnen würdest, wie würdest du regionale Zutaten und bezahlbare Preise miteinander vereinbaren?",
-                "it": "Se aprissi un bar, come riusciresti a usare ingredienti locali mantenendo prezzi accessibili?",
-                "pt": "Se você abrisse uma cafeteria, como conciliaria ingredientes locais com preços acessíveis?",
-                "zh": "如果你开一家咖啡馆，你会怎样在使用本地食材和保持价格合理之间取得平衡？"
+                "ko": "카페를 연다면 지역 재료를 쓰면서도 가격을 합리적으로 유지하는 방법이 있을까요?",
+                "ja": "カフェを開くとしたら、地元の食材を使いながら手頃な価格を保つにはどうすればいいと思いますか。"
             ]
             for reply in ["I am learning. How can I politely order a coffee?", advanced[id] ?? "Tell me more."] {
                 let before = coordinator.session?.fragments.filter { $0.speaker == .assistant }.count ?? 0
@@ -99,9 +99,10 @@ extension AudioVerification {
             if let detected = recognizer.dominantLanguage?.rawValue {
                 report.targetLanguageDetected = detected == id || detected.hasPrefix(id + "-")
             }
-            report.pinyinAvailable = MandarinPinyin.reading(coordinator.caption) != nil
+            report.readingAvailable = coordinator.language.wordSegmentationLocale
+                .flatMap { Readings.reading(coordinator.caption, locale: $0) } != nil
             report.translated = await waitFor(20) { !coordinator.meaning.isEmpty && !coordinator.translating }
-            let lookupWords = ["de": "Kaffee", "it": "caffè", "pt": "café", "zh": "咖啡"]
+            let lookupWords = ["ko": "커피", "ja": "コーヒー"]
             do {
                 let result = try await coordinator.lookup(word: lookupWords[id] ?? coordinator.language.greetingWord, sentence: coordinator.caption)
                 report.lookupReturned = !result.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -121,7 +122,7 @@ extension AudioVerification {
         if let data = try? coordinator.store.exportData(), let restored = try? Archive.decode(data) {
             report.archiveRoundTrip = restored.sessions.count == saved.count && restored.sessions.allSatisfy { $0.languageID == id }
         }
-        coordinator.selectLanguage("nb")
+        coordinator.selectLanguage(LanguageRegistry.all.first { $0.id != id }?.id ?? id)
         let otherEmpty = coordinator.store.learner.words.isEmpty
         coordinator.selectLanguage(id)
         report.switchedAwayAndBack = otherEmpty && coordinator.language.id == id && coordinator.store.sessions.filter { $0.languageID == id }.count == saved.count

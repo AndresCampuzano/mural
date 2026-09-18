@@ -28,6 +28,6 @@ Gifts and purchases have no automatic expiration in the current design. Purchase
 
 The new `/v1/minutes` endpoint reports a guest or member's time balance. `/v1/guest/minutes` starts or resumes a verified trial; `/v1/minutes/link-guest` transfers its remainder after sign-in. `/v1/minutes/welcome` verifies an account-bound eligibility proof before granting a signup-first offer. The server's pricing response explicitly reports minute purchases as unavailable until real pack checkout and settlement are implemented.
 
-These controls are a backend foundation. Hosted voice still uses the restricted experimental controller and has not yet been switched to minute reservations. Verified Android attestation, client integration, paid pack fulfillment/refunds, helper budgets and the consumer minute UI must be connected before production activation.
+These controls are a backend foundation. Hosted voice still uses the restricted experimental controller and has not yet been switched to minute reservations. Verified client attestation and integration, paid pack fulfillment/refunds, helper budgets and the consumer minute UI must be connected before production activation.
 
 See [how to manage free minutes](manage-free-minutes.md) for operator commands.
