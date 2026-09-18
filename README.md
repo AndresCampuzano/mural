@@ -56,7 +56,7 @@ Updating an earlier checkout? The iPhone project now lives in `apps/ios/`. Befor
 3. Select the **Mural** target, open **Signing & Capabilities**, enable automatic signing, and choose your team. For your own fork, replace the bundle identifier with a unique value such as `com.yourname.mural`. Keep that value stable for later updates.
 4. Connect and unlock your iPhone. Trust the Mac if prompted. Turn on **Settings → Privacy & Security → Developer Mode** on the phone, restart, and confirm the setting.
 5. Select **Mural** as the scheme and your iPhone as the destination, then click **Run**. If iOS asks you to trust the developer, do so in **Settings → General → VPN & Device Management**.
-6. Choose your learning and subtitle languages in the welcome screens. In **Settings → Advanced → Use your own API key**, save your own OpenAI project key. Start a conversation and allow microphone access.
+6. Choose your learning language, your level and your subtitle language in the welcome screens. In **Settings → Advanced → Use your own API key**, save your own OpenAI project key. Start a conversation and allow microphone access.
 
 You should hear Mural greet you in your chosen language. You can now disconnect your phone from the Mac and use Wi-Fi or cellular.
 
@@ -64,7 +64,9 @@ A free Personal Team can run the app on your own phone; TestFlight and App Store
 
 ## What works today
 
-- **A warm welcome:** choose a learning language and a subtitle language in two short screens, with a greeting that changes languages.
+- **A warm welcome:** choose a learning language, how much of it you want, and a subtitle language in three short screens, with a greeting that changes languages.
+- **Your level:** *Starting out* has Mural explain in your subtitle language and teach one short phrase at a time; *Finding my feet* keeps the target language leading with a few words of help; *In at the deep end* is target language only. Change it at any time in Settings; a running conversation follows immediately.
+- **Speaking pace:** slow, gentle, natural or brisk. The provider slows the generated voice, and Mural is asked to phrase things more slowly to match. A new pace applies to your next conversation.
 - **Conversation practice:** live voice, gentle corrections, optional meaning subtitles, word lookup, mute, and a typed reply when speaking is inconvenient.
 - **Themes:** 24 conversation settings, with cultural details supplied by each language module. You can also request a current topic; web search supplies source links.
 - **Adaptive practice:** vocabulary and provisional ability observations come from validated conversation evidence. Each learning language keeps separate progress.

@@ -156,7 +156,22 @@ public struct Preferences: Codable, Sendable {
     public var interests = ""
     public var hasOnboarded = false
     public var aiConsentVersion: Int?
+    /// Optional so a backup written before levels existed still decodes.
+    public var guidanceLevelID: String?
+    /// Optional so an unset pace can follow the level. Stored as the provider's own multiplier.
+    public var speechSpeed: Double?
     public init() {}
+    /// An absent or unrecognised identifier falls back rather than rejecting the backup: the
+    /// level is presentation and prompt policy, never stored learning evidence. The fallback is
+    /// target-language-only, which is how Mural behaved before this setting existed.
+    public var guidanceLevel: GuidanceLevel {
+        guidanceLevelID.flatMap(GuidanceLevel.init(rawValue:)) ?? .inAtTheDeepEnd
+    }
+    public var speed: Double {
+        guard let speechSpeed, speechSpeed.isFinite else { return guidanceLevel.pace.speed }
+        return min(SpeechPace.range.upperBound, max(SpeechPace.range.lowerBound, speechSpeed))
+    }
+    public var pace: SpeechPace { SpeechPace.nearest(to: speed) }
 }
 
 public struct Archive: Codable, Sendable {
@@ -208,7 +223,9 @@ public struct Archive: Codable, Sendable {
         guard LanguageRegistry.module(for: preferences.learningLanguageID) != nil else { throw ArchiveError.unsupportedLanguage }
         guard Set(sessions.map(\.id)).count == sessions.count,
               sessions.count <= Self.maximumSessions,
-              preferences.sessionMinutes >= 1, preferences.sessionMinutes <= 60 else { throw ArchiveError.invalid }
+              preferences.sessionMinutes >= 1, preferences.sessionMinutes <= 60,
+              preferences.speechSpeed.map({ $0.isFinite && SpeechPace.range.contains($0) }) ?? true
+        else { throw ArchiveError.invalid }
         func validDate(_ date: Date) -> Bool { date >= .distantPast && date <= .distantFuture }
         for s in sessions {
             guard LanguageRegistry.module(for: s.languageID) != nil else { throw ArchiveError.unsupportedLanguage }

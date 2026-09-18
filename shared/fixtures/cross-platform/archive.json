@@ -1,6 +1,7 @@
 {
  "preferences": {
   "aiConsentVersion": 1,
+  "guidanceLevelID": "finding-my-feet",
   "hasOnboarded": true,
   "hiddenWords": [
    "ko|soup|a hot liquid food"
@@ -9,7 +10,8 @@
   "learningLanguageID": "ko",
   "meaningLanguage": "Spanish",
   "meaningVisible": true,
-  "sessionMinutes": 15
+  "sessionMinutes": 15,
+  "speechSpeed": 0.85
  },
  "schemaVersion": 2,
  "sessions": [

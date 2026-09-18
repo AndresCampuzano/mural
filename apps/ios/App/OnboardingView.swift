@@ -6,6 +6,7 @@ struct OnboardingView: View {
     let done: () -> Void
     @State private var step = 0
     @State private var targetID: String
+    @State private var level: GuidanceLevel
     @State private var meaningLanguage: String
     @State private var hasChosenMeaning: Bool
     @State private var greetingIndex = 0
@@ -17,6 +18,8 @@ struct OnboardingView: View {
         self.coordinator = coordinator
         self.done = done
         _targetID = State(initialValue: coordinator.language.id)
+        // A first conversation is where too little support hurts most, so the chooser starts there.
+        _level = State(initialValue: coordinator.store.preferences.guidanceLevelID.flatMap(GuidanceLevel.init(rawValue:)) ?? .startingOut)
         _meaningLanguage = State(initialValue: coordinator.store.preferences.meaningLanguage)
         _hasChosenMeaning = State(initialValue: coordinator.store.preferences.meaningLanguage != Preferences().meaningLanguage)
     }
@@ -27,19 +30,19 @@ struct OnboardingView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                if step == 1 {
-                    Button { move(to: 0) } label: {
+                if step > 0 {
+                    Button { move(to: step - 1) } label: {
                         Image(systemName: "chevron.left").font(.system(size: 20, weight: .medium)).frame(width: 44, height: 44)
                             .modifier(SoftGlass())
-                    }.accessibilityLabel("Back to learning language").accessibilityIdentifier("onboarding-back")
+                    }.accessibilityLabel(step == 1 ? "Back to learning language" : "Back to your level").accessibilityIdentifier("onboarding-back")
                 } else { Brand() }
                 Spacer()
                 HStack(spacing: 6) {
-                    ForEach(0..<2) { index in
+                    ForEach(0..<3) { index in
                         Capsule().fill(index == step ? MuralColor.orange : MuralColor.peach)
                             .frame(width: index == step ? 24 : 8, height: 6)
                     }
-                }.accessibilityElement(children: .ignore).accessibilityLabel("Step \(step + 1) of 2")
+                }.accessibilityElement(children: .ignore).accessibilityLabel("Step \(step + 1) of 3")
             }.padding(.horizontal, 26).padding(.top, 8).frame(height: 54)
 
             ScrollView {
@@ -56,22 +59,25 @@ struct OnboardingView: View {
 
                     Group {
                         if step == 0 { languageStep }
+                        else if step == 1 { levelStep }
                         else { meaningStep }
                     }.id(step).transition(reduceMotion ? .identity : .opacity.combined(with: .offset(y: 14)))
-                    if step == 1 && typeSize.isAccessibilitySize { consentDetails }
+                    if step == 2 && typeSize.isAccessibilitySize { consentDetails }
                 }.padding(.horizontal, 26).padding(.bottom, 22)
             }.scrollIndicators(.hidden).id(step)
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(spacing: 12) {
-                if step == 1 && !typeSize.isAccessibilitySize { consentDetails }
-                Button(step == 0 ? "Continue" : "Agree and continue") { advance() }
+                if step == 2 && !typeSize.isAccessibilitySize { consentDetails }
+                Button(step == 2 ? "Agree and continue" : "Continue") { advance() }
                     .font(.system(.headline, design: .rounded)).multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity).padding(.vertical, 19)
                     .background(MuralColor.orange, in: Capsule())
                     .accessibilityIdentifier("onboarding-continue")
                 if !typeSize.isAccessibilitySize {
-                    Text(step == 0 ? "We’ll find your pace through conversation." : "You can change both languages in Settings.")
+                    Text(step == 0 ? "We’ll find your pace through conversation."
+                         : step == 1 ? "You can change this at any time in Settings."
+                         : "You can change both languages in Settings.")
                         .font(.caption).foregroundStyle(MuralColor.secondary).multilineTextAlignment(.center)
                 }
             }.padding(.horizontal, 26).padding(.top, 16).padding(.bottom, 16)
@@ -81,6 +87,7 @@ struct OnboardingView: View {
         .foregroundStyle(MuralColor.ink).tint(MuralColor.ink)
         .interactiveDismissDisabled()
         .sensoryFeedback(.selection, trigger: targetID)
+        .sensoryFeedback(.selection, trigger: level)
         .task(id: reduceMotion) {
             guard !reduceMotion else { return }
             while !Task.isCancelled {
@@ -132,6 +139,51 @@ struct OnboardingView: View {
         }
     }
 
+    private var levelStep: some View {
+        VStack(spacing: 18) {
+            VStack(spacing: 10) {
+                Text("How much \(target.name)\ndo you want?")
+                    .font(.system(.title2, design: .rounded, weight: .semibold)).tracking(-0.5)
+                Text("Pick where you are today. Mural adjusts as you go, and you can change this whenever you like.")
+                    .font(.subheadline).foregroundStyle(MuralColor.secondary)
+            }.multilineTextAlignment(.center).accessibilityIdentifier("onboarding-level-title")
+            VStack(spacing: 10) {
+                ForEach(GuidanceLevel.allCases) { option in
+                    Button { level = option } label: {
+                        HStack(spacing: 14) {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(option.title).font(.system(.headline, design: .rounded))
+                                // At accessibility sizes three described rows cannot fit on screen,
+                                // so only the chosen level keeps its description, below the list.
+                                if !typeSize.isAccessibilitySize {
+                                    Text(option.detail(language: target, meaningLanguage: meaningLanguage))
+                                        .font(.caption).foregroundStyle(MuralColor.secondary)
+                                        .fixedSize(horizontal: false, vertical: true).multilineTextAlignment(.leading)
+                                }
+                            }
+                            Spacer(minLength: 8)
+                            Image(systemName: level == option ? "checkmark.circle.fill" : "circle")
+                                .font(.title3).foregroundStyle(level == option ? MuralColor.orange : MuralColor.secondary.opacity(0.4))
+                        }.padding(.horizontal, 18).padding(.vertical, 13).frame(maxWidth: .infinity)
+                            .background(level == option ? .white.opacity(0.92) : .white.opacity(0.52), in: RoundedRectangle(cornerRadius: 22))
+                            .overlay { RoundedRectangle(cornerRadius: 22).strokeBorder(level == option ? MuralColor.orange.opacity(0.55) : .clear, lineWidth: 1.5) }
+                    }.buttonStyle(.plain)
+                        .accessibilityLabel("\(option.title). \(option.detail(language: target, meaningLanguage: meaningLanguage))")
+                        .accessibilityAddTraits(level == option ? .isSelected : [])
+                        .accessibilityIdentifier("onboarding-level-\(option.rawValue)")
+                }
+            }
+            VStack(spacing: 8) {
+                if typeSize.isAccessibilitySize {
+                    Text(level.detail(language: target, meaningLanguage: meaningLanguage))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Text("Mural will speak at a \(level.pace.title.lowercased()) pace to start with.")
+                    .accessibilityIdentifier("onboarding-level-pace")
+            }.font(.caption).foregroundStyle(MuralColor.secondary).multilineTextAlignment(.center)
+        }
+    }
+
     private var meaningStep: some View {
         VStack(spacing: 22) {
             VStack(spacing: 10) {
@@ -168,10 +220,15 @@ struct OnboardingView: View {
                     ?? MeaningLanguages.all.first { $0 != target.name } ?? "English"
             }
             move(to: 1)
+        } else if step == 1 {
+            move(to: 2)
         } else {
             coordinator.selectLanguage(targetID)
             coordinator.selectMeaningLanguage(meaningLanguage)
-            coordinator.store.updatePreferences { $0.meaningVisible = true; $0.aiConsentVersion = AIProcessingConsent.version }
+            coordinator.store.updatePreferences {
+                $0.meaningVisible = true; $0.aiConsentVersion = AIProcessingConsent.version
+                $0.guidanceLevelID = level.rawValue
+            }
             done()
         }
     }

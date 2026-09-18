@@ -25,7 +25,7 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         let (data, response) = try await session.data(for: request)
         try Task.checkCancellation()
         guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-        guard (200..<300).contains(http.statusCode) else { throw APIError.http(http.statusCode) }
+        guard (200..<300).contains(http.statusCode) else { throw APIError.http(http.statusCode, Self.providerMessage(data)) }
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { throw APIError.invalidResponse }
         return json
     }
@@ -54,6 +54,16 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         guard !text.isEmpty else { throw APIError.incomplete }
         return APIResult(text: text, sources: sources, usage: usage)
     }
+    /// The provider's own explanation of a rejection, so a bad field is diagnosable instead of
+    /// showing a bare status. Only the message and the parameter it names are read, and the
+    /// request — which carries the Authorization header — is never included.
+    private static func providerMessage(_ data: Data) -> String? {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let error = json["error"] as? [String: Any] else { return nil }
+        let parts = [error["message"] as? String, (error["param"] as? String).map { "(\($0))" }]
+        let text = parts.compactMap { $0 }.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+        return text.isEmpty ? nil : String(text.prefix(300))
+    }
     static func object(_ fields: [String: Any]) -> [String: Any] { ["type": "object", "properties": fields, "required": fields.keys.sorted(), "additionalProperties": false] }
     static let string: [String: Any] = ["type": "string"]
     static func assessmentSchema(language: LanguageModule) -> [String: Any] { object([
@@ -66,16 +76,18 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         ])]
     ]) }
     enum APIError: LocalizedError {
-        case missingKey, invalidResponse, incomplete, refused, http(Int)
+        case missingKey, invalidResponse, incomplete, refused, http(Int, String?)
         var errorDescription: String? {
             switch self {
             case .missingKey: "Add your OpenAI key in Settings to begin."
             case .invalidResponse, .incomplete: "OpenAI returned an incomplete response. Please try again."
             case .refused: "Mural couldn’t complete that request. Try a different topic."
-            case .http(401): "Your OpenAI key wasn’t accepted. Check it in Settings."
-            case .http(403), .http(404): "This API key may not have access to the requested model. Check your OpenAI project."
-            case .http(429): "OpenAI’s usage or rate limit was reached. Check your project’s billing and limits."
-            case .http(let status): "OpenAI couldn’t complete the request (HTTP \(status)). Please try again."
+            case .http(401, _): "Your OpenAI key wasn’t accepted. Check it in Settings."
+            case .http(403, let detail), .http(404, let detail):
+                "This API key may not have access to the requested model. Check your OpenAI project." + (detail.map { " OpenAI said: \($0)" } ?? "")
+            case .http(429, _): "OpenAI’s usage or rate limit was reached. Check your project’s billing and limits."
+            case .http(let status, let detail):
+                "OpenAI couldn’t complete the request (HTTP \(status))." + (detail.map { " OpenAI said: \($0)" } ?? "") + " Please try again."
             }
         }
     }

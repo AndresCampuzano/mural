@@ -196,3 +196,78 @@ That transcription spells kana as written, which is wrong for the particles は,
 One interface defect was found and fixed during these runs. The reading aid's Show/Hide control never responded to a tap: a caption-sized `Label` inside a plain button collapsed to a hairline target between its chevron and title, so the tap landed on nothing. Padding the label and giving it an explicit content shape fixed it, confirmed by the previously failing test. An intermediate attempt to persist the choice in `UserDefaults` was reverted because the stored value leaked between test runs; the control is view-local state again.
 
 Not verified: no live device check was run for either module, so nothing here establishes real speech recognition, pronunciation, correction quality or teaching effectiveness for Korean or Japanese. The marketing and App Store screenshot sets still need recapturing for anything beyond the Korean sample content.
+
+## Level and speaking pace
+
+18 September 2026
+
+The learner now chooses how much of the conversation is carried in the language they already
+read, and how quickly Mural speaks. `GuidanceLevel` offers **Starting out** (Mural speaks the
+chosen subtitle language and teaches one short target phrase at a time), **Finding my feet**
+(target language leading, a few words of support when something is new) and **In at the deep
+end** (target language only). An absent or unrecognised stored value falls back to the deep
+end, so existing installs and existing backups behave exactly as before. The choice is made on
+a new middle onboarding step and in Settings; a running conversation adopts a new level at
+once.
+
+`SpeechPace` maps Slow, Gentle, Natural and Brisk onto 0.7, 0.85, 1.0 and 1.15 and sends the
+value as `session.audio.output.speed` when the session is created. The provider documents the
+range as 0.25–1.5 with a default of 1.0, allows the value to change only between model turns,
+and applies it to the generated audio rather than to how the model composes speech, so
+`TeachingPolicy` asks for matching pacing in words as well and a new pace waits for the next
+conversation. An unset pace follows the level, so Starting out begins slow.
+
+Both settings are language-agnostic. Every prompt takes a `LanguageModule`, and the level, its
+description and its pace read identically for Korean and Japanese.
+
+The level changes prompts only. `LearningEngine.validate` never receives it, and its existing
+downgrade still applies: a beginner repeating a phrase Mural has just said is recorded as
+assisted, with no independent recall and no recall bar.
+
+- **87 core tests passed**, including the 14 new level and pace tests: the fallback for an
+  archive written before the setting existed, an unknown level falling back instead of
+  rejecting a backup, a stored speed outside the provider range being rejected, every pace
+  inside the documented range, the deep-end prompts being byte-identical to the previous
+  target-only prompts, the beginner and intermediate prompts for both modules, prompt
+  isolation between Korean and Japanese at every level, and assisted-not-independent credit in
+  both modules.
+- **18 native UI tests passed** on an iPhone 17 simulator running iOS 27.0, in
+  `.build/Guidance-UI.xcresult`. They cover the three-step onboarding for both languages, the
+  level defaulting to Starting out with its pace line, moving back through both steps while
+  keeping an explicit subtitle choice, the largest accessibility text size, and the Settings
+  level and pace pickers including the level description following a switch to Japanese.
+- **The signed device build passed and was installed** over the existing personal installation
+  on the owner's iPhone 15 Pro Max, using the same bundle identifier and signing team.
+- One interface defect was found and fixed during the run. At the largest accessibility text
+  size three described level rows could not be scrolled clear of the fixed Continue footer, so
+  the test could never reach the first row. At accessibility sizes the rows now show their
+  title only and the selected level's description moves below the list.
+
+Not verified: no live conversation was held, so nothing here establishes that the provider
+accepts the speed field in practice, how the beginner level actually sounds, or whether the
+taught phrases are well chosen. The hosted voice service in `services/api` was not changed and
+still sends no speed; it remains disabled. No proficient speaker has reviewed either module's
+teaching at any level.
+
+### HTTP 400 on the first live conversation
+
+The owner hit `HTTP 400` starting voice on the build above. The prime suspect is the
+`session.audio.output.speed` field: the range and semantics were read from OpenAI's realtime
+documentation, but this app creates sessions at `/v1/live/sessions` with `gpt-live-1`, and
+nothing had ever verified that this surface accepts the field. The build also discarded the
+provider's explanation, so the failure showed only a bare status.
+
+Two changes, neither of which assumes the cause:
+
+- `APIClient` now reads `error.message` and `error.param` from a rejection body, bounded to 300
+  characters, and shows them in the alert. The request, which carries the Authorization header,
+  is never included.
+- `LiveTransport` creates the session with the pace field, and on a `400` retries once without
+  it. A rejected create is never billed and opens no session, so the retry is safe, and a pace
+  the model will not accept can no longer cost the conversation. The conversation then reports
+  that it is speaking at normal speed, with the provider's reason.
+
+87 core tests and 18 native UI tests passed after the change, and both builds succeeded; the
+corrected build was installed. The UI suite does not reach this code, because a preview launch
+never opens a session. Whether the field is the cause, and whether the pace works at all
+against this model, is still unverified — the next live attempt decides it.

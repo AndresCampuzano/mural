@@ -51,6 +51,41 @@ with the wrong language. It downgrades `independent` to `assisted` when subtitle
 visible, the reply was typed, or the app said the word within the last 90 seconds. Never
 loosen these checks to make progress look better.
 
+### Every feature is language-agnostic
+
+**A new feature works for every registered module, or it is not finished.** Korean is the
+default, not the subject. Nothing outside `Core/Languages/` may name a language, hardcode
+Korean or Japanese, branch on `"ko"`/`"ja"`, or assume a script, a greeting, spacing or a
+reading aid. Take a `LanguageModule` and read what you need from it; if the behaviour genuinely
+differs per language, add a field to `LanguageModule` and let each module answer for itself,
+the way `wordSegmentationLocale` and `readingAidName` already do.
+
+The same holds for the third language in play: the subtitle language is the learner's choice
+from `MeaningLanguages.all`, so user-facing strings and prompts interpolate it rather than
+saying English.
+
+Prove it in tests: loop over `LanguageRegistry.all` rather than testing Korean, and assert the
+other module's name never leaks into a prompt, the way `LanguageTests` and `GuidanceTests` do.
+A feature tested only against Korean is treated as untested.
+
+### Level and pace
+
+The learner picks a `GuidanceLevel` (`Core/Guidance.swift`) in onboarding and in Settings:
+`startingOut` speaks mainly the subtitle language and teaches one short phrase at a time,
+`findingMyFeet` leads in the target language with brief glosses, `inAtTheDeepEnd` is target
+language only. An absent or unrecognised stored value falls back to `inAtTheDeepEnd`, which is
+how Mural behaved before the setting existed, so old installs and old backups do not change.
+`TeachingPolicy` takes the level on every spoken prompt and defaults it to `inAtTheDeepEnd`.
+
+`SpeechPace` maps four named paces onto the provider's `session.audio.output.speed`, which
+accepts 0.25–1.5, defaults to 1.0, and can only change between model turns — so Mural sends it
+once when the session is created and a new pace waits for the next conversation. It is applied
+to the generated audio afterwards, not to how the model composes speech, so `TeachingPolicy`
+asks for matching pacing in words as well. Do not describe it as changing the model's delivery.
+
+The level changes prompts only. `LearningEngine.validate` never sees it, and a beginner
+repeating a phrase Mural has just said is still downgraded to `assisted`.
+
 ## Security
 
 **Never put an API key in the repository.** Not in source, tests, fixtures, logs, scripts or
@@ -138,6 +173,10 @@ macrons. Say so rather than overselling it.
 - **A caption-sized `Label` inside a plain `Button` collapses to a hairline tap target.** It
   reports as hittable and the action silently never fires. Pad the label and give it
   `.contentShape(Rectangle())`. `ReadingHelp.swift` is the worked example.
+- **The beginner level makes Mural speak the learner's own language on purpose.** The
+  `NLLanguageRecognizer` drift check in `ConversationCoordinator.checkLanguage` must stay gated
+  on `GuidanceLevel.expectsTargetLanguageThroughout`, or it redirects Mural back into the
+  target language mid-explanation and the level silently stops working.
 - **Do not back a UI toggle with `@AppStorage` if tests assert it.** The value persists across
   test runs in the simulator and leaks between cases. View-local `@State` is correct here.
 - **The Xcode project is generated.** Adding or renaming a file under `apps/ios/App/` without
