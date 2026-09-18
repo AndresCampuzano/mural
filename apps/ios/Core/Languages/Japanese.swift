@@ -25,6 +25,9 @@ extension LanguageModule {
             "cabin": .init("cabin", "週末の小旅行", "A change of scene", "mountain.2", "Local life", "Plan an imagined weekend away in Japan. Choose a city, coast or mountain together and discuss practical plans.", 2),
             "traditions": .init("traditions", "日々の習慣", "Small customs, big stories", "flag", "Local life", "Talk about everyday customs, seasons and family routines in Japanese. Compare the learner's experience without treating any culture as uniform.", 2)
         ],
-        wordSegmentationLocale: "ja_JP", readingAidName: "romaji"
+        wordSegmentationLocale: "ja_JP", readingAidName: "romaji",
+        // Kana, the iteration mark, halfwidth katakana and the Han characters written with them.
+        scriptRanges: [0x3005...0x3005, 0x3040...0x309F, 0x30A0...0x30FF, 0x31F0...0x31FF,
+                       0x3400...0x4DBF, 0x4E00...0x9FFF, 0xF900...0xFAFF, 0xFF66...0xFF9D, 0x20000...0x2FA1F]
     )
 }

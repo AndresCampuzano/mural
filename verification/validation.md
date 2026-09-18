@@ -271,3 +271,55 @@ Two changes, neither of which assumes the cause:
 corrected build was installed. The UI suite does not reach this code, because a preview launch
 never opens a session. Whether the field is the cause, and whether the pace works at all
 against this model, is still unverified — the next live attempt decides it.
+
+## Saved phrases
+
+18 September 2026
+
+When Mural uses target-language phrases in a line — "for goodbye you say X, for hello Y" — the
+Talk screen now offers one capsule per phrase under the caption, plus **Save all** when there
+is more than one. Kept phrases are read in **Words → Saved phrases**, the target text first
+with its meaning underneath, and are removed by swiping.
+
+A phone caption leaves very little room, so the chooser is a single horizontally scrolling row:
+each capsule holds its phrase on one line with middle truncation, the row costs one line of
+height however much Mural said, and the kept phrases are read on their own screen rather than
+on top of the conversation. At accessibility text sizes the capsules take the full width and
+the row scrolls instead of wrapping.
+
+The list is a notebook, not evidence. `LearningEngine` never reads it, saving grants no recall
+bar, and the list says so in its own footer. Saving is immediate and local; meanings are
+fetched afterwards in one batched request, and only when the learner saves or asks for them, so
+opening the list spends nothing. A phrase whose meaning never arrived reads "No meaning yet"
+and offers to fetch it rather than claiming to be loading.
+
+Phrases are found by script: each module declares `scriptRanges`, so a mixed line separates
+cleanly. A space between two target words belongs to the phrase and a space before the
+learner's own language does not; quotation marks and sentence punctuation are trimmed;
+repeats are offered once; the list is capped at six.
+
+- **100 core tests passed**, including 13 new ones: every module declaring its own script and
+  finding its own greeting, the two-phrase explanation in both Korean and Japanese, spacing
+  inside a phrase against spacing beside English, trimmed quotes and sentence endings, one
+  module's script never being offered to the other, deduplication and the six-phrase cap,
+  truncation at 200 characters, archives without the list still decoding, round trips in both
+  modules, rejection of an empty phrase and of an unregistered language, import adding only
+  phrases the device lacks, and a saved phrase producing no learner evidence at all.
+- **20 native UI tests passed** on an iPhone 17 simulator running iOS 27.0, in
+  `.build/Phrases-UI.xcresult`, including the two new ones: saving a Korean phrase from the
+  caption, seeing it in the saved list with "No meaning yet" and the offer to fetch meanings,
+  removing it back to the empty state; and the same capture in Japanese, where the saved phrase
+  also carries its romaji.
+- `shared/fixtures/cross-platform/archive.json` now pins a saved phrase, so the field round
+  trips across platforms.
+
+One test assertion was dropped as unsound rather than made to pass: after removing a phrase it
+checked the capsule on the Talk screen again, but the conversation resets itself fifteen seconds
+after ending, so the caption — and its capsules — are legitimately gone by then. Removal is
+proved by the empty state instead.
+
+Not verified: no live conversation has produced these phrases yet. The extraction is exercised
+against fixed strings and the seeded preview conversation, not against real speech transcripts,
+and the batched meaning request has never run against the provider. Whether the phrases Mural
+actually teaches are the ones worth keeping is unknown, and no proficient speaker has reviewed
+the meanings.

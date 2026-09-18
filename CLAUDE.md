@@ -86,6 +86,23 @@ asks for matching pacing in words as well. Do not describe it as changing the mo
 The level changes prompts only. `LearningEngine.validate` never sees it, and a beginner
 repeating a phrase Mural has just said is still downgraded to `assisted`.
 
+### Saved phrases
+
+When Mural uses target-language phrases in a line, `Phrases.candidates` finds them and the Talk
+screen offers one capsule each, plus **Save all**, in a single horizontally scrolling row. Kept
+phrases live in `Archive.savedPhrases` and are read in **Words → Saved phrases**, target text
+first with its meaning underneath.
+
+This list is a notebook, **not evidence**. `LearningEngine` never reads it, saving grants no
+recall bar, and the interface says so. Keep it that way: the bars mean retrieval in
+conversation, and a bookmark is not retrieval.
+
+Phrases are found by script. Each module declares `scriptRanges`, so a line that mixes the
+learner's language with the target separates cleanly — a module written in the same script the
+learner reads cannot be separated this way and needs a different strategy before it is
+registered. Meanings are fetched in one batched request, only when the learner saves or asks,
+so opening the list costs nothing.
+
 ## Security
 
 **Never put an API key in the repository.** Not in source, tests, fixtures, logs, scripts or

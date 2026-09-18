@@ -24,6 +24,8 @@ extension LanguageModule {
             "restaurant": .init("restaurant", "같이 먹어요", "Stay for one more", "wineglass", "Everyday", "Share a meal at a Korean restaurant. Practise ordering, sharing dishes and 반찬, and polite problem-solving.", 0),
             "cabin": .init("cabin", "주말 여행", "A change of scene", "mountain.2", "Local life", "Plan an imagined weekend away in Korea. Choose a city, coast or mountain together and discuss practical plans.", 2),
             "traditions": .init("traditions", "일상 속 문화", "Small customs, big stories", "flag", "Local life", "Talk about everyday customs, holidays and family routines in Korean. Compare the learner's experience without treating any culture as uniform.", 2)
-        ]
+        ],
+        // Hangul syllables and jamo, including the compatibility and extended blocks.
+        scriptRanges: [0x1100...0x11FF, 0x3130...0x318F, 0xA960...0xA97F, 0xAC00...0xD7A3, 0xD7B0...0xD7FF]
     )
 }

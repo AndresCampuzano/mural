@@ -177,10 +177,14 @@ public struct Preferences: Codable, Sendable {
 public struct Archive: Codable, Sendable {
     public static let maximumEncodedBytes = 30_000_000
     private static let maximumSessions = 10_000
+    private static let maximumSavedPhrases = 2_000
     public var schemaVersion = 2
     public var sessions: [SessionRecord] = []
     public var preferences = Preferences()
+    /// Optional so a backup written before the saved list existed still decodes.
+    public var savedPhrases: [SavedPhrase]?
     public init() {}
+    public var phrases: [SavedPhrase] { savedPhrases ?? [] }
     public static func decode(_ data: Data) throws -> Archive {
         guard data.count <= maximumEncodedBytes else { throw ArchiveError.tooLarge }
         let migrated = try migrate(data)
@@ -210,6 +214,10 @@ public struct Archive: Codable, Sendable {
         let additions = incoming.sessions.filter { !known.contains($0.id) }
         guard additions.count <= Self.maximumSessions - sessions.count else { throw ArchiveError.tooLarge }
         var candidate = self
+        let keptPhrases = Set(phrases.map(\.key))
+        let newPhrases = incoming.phrases.filter { !keptPhrases.contains($0.key) }
+        guard newPhrases.count <= Self.maximumSavedPhrases - phrases.count else { throw ArchiveError.tooLarge }
+        if !newPhrases.isEmpty { candidate.savedPhrases = candidate.phrases + newPhrases }
         for var session in additions {
             session.invalidateChangedAssessments()
             session.assessments = session.assessments.compactMap { LearningEngine.validate($0, session: session) }
@@ -227,6 +235,13 @@ public struct Archive: Codable, Sendable {
               preferences.speechSpeed.map({ $0.isFinite && SpeechPace.range.contains($0) }) ?? true
         else { throw ArchiveError.invalid }
         func validDate(_ date: Date) -> Bool { date >= .distantPast && date <= .distantFuture }
+        guard phrases.count <= Self.maximumSavedPhrases, Set(phrases.map(\.id)).count == phrases.count else { throw ArchiveError.invalid }
+        for phrase in phrases {
+            guard LanguageRegistry.module(for: phrase.languageID) != nil else { throw ArchiveError.unsupportedLanguage }
+            guard !phrase.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                  phrase.text.count <= SavedPhrase.maximumLength, phrase.meaning.count <= 300,
+                  phrase.source.count <= 500, validDate(phrase.savedAt) else { throw ArchiveError.invalid }
+        }
         for s in sessions {
             guard LanguageRegistry.module(for: s.languageID) != nil else { throw ArchiveError.unsupportedLanguage }
             // These generous limits exceed a normal session while keeping UI conversions and totals safe.

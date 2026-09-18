@@ -22,6 +22,11 @@ public struct LanguageModule: Identifiable, Sendable {
     /// Name of the optional reading aid offered under target text, such as "romaji".
     /// `nil` hides the control entirely.
     public var readingAidName: String? = nil
+    /// Unicode ranges this language's own script occupies, used to find its phrases inside a
+    /// sentence that also carries the learner's own language. A module written in the same
+    /// script as the learner reads — Latin beside English, say — cannot be separated this way
+    /// and needs a different strategy before it is registered.
+    public var scriptRanges: [ClosedRange<UInt32>] = []
 
     public var themes: [ConversationTheme] {
         ConversationTheme.shared.map { themeOverrides[$0.id] ?? $0 }

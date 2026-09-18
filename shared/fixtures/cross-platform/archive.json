@@ -13,6 +13,17 @@
   "sessionMinutes": 15,
   "speechSpeed": 0.85
  },
+ "savedPhrases": [
+  {
+   "id": "7E2C3F52-9C21-4E7A-9C8E-5A4B1D6F0A33",
+   "languageID": "ko",
+   "meaning": "una taza de café, por favor",
+   "meaningLanguage": "Spanish",
+   "savedAt": 801000000.0,
+   "source": "커피 한 잔 주세요.",
+   "text": "커피 한 잔 주세요"
+  }
+ ],
  "schemaVersion": 2,
  "sessions": [
   {
