@@ -301,6 +301,10 @@ struct SettingsView: View {
             Form {
                 Section {
                     LearningLanguagePicker(coordinator: coordinator)
+                    GuidanceLevelPicker(coordinator: coordinator)
+                    Picker("Speaking pace", selection: Binding(get: { store.preferences.pace }, set: { coordinator.selectSpeechPace($0) })) {
+                        ForEach(SpeechPace.allCases) { pace in Text(pace.title).tag(pace) }
+                    }.pickerStyle(.menu).accessibilityIdentifier("speech-pace-picker")
                     Toggle("Meaning subtitles", isOn: Binding(get: { store.preferences.meaningVisible }, set: { value in
                         if value != store.preferences.meaningVisible { coordinator.toggleMeaning() }
                     }))
@@ -309,7 +313,10 @@ struct SettingsView: View {
                     }
                     LabeledContent("Corrections", value: "Gently, as we talk")
                     TextField("A few things you enjoy", text: Binding(get: { store.preferences.interests }, set: { value in store.updatePreferences { $0.interests = String(value.prefix(500)) } }), axis: .vertical)
-                } header: { Text("Just your pace") } footer: { Text(coordinator.isRunning ? "End this conversation to switch languages. Each language keeps its own words and progress." : "Each language keeps its own words and progress. Mural finds your pace through conversation.") }
+                } header: { Text("Just your pace") } footer: {
+                    Text((coordinator.isRunning ? "End this conversation to switch languages. Each language keeps its own words and progress." : "Each language keeps its own words and progress. Mural finds your pace through conversation.")
+                         + " Your level applies straight away. A new speaking pace starts with your next conversation: it slows the voice you hear, and asks Mural to phrase things more slowly too.")
+                }
                 if ManagedAccountConfiguration.load() != nil {
                     Section {
                         NavigationLink { ManagedAccountView() } label: {
@@ -395,6 +402,21 @@ struct SettingsView: View {
                     .navigationTitle("Open-source notices").navigationBarTitleDisplayMode(.inline)
             }
         }
+    }
+}
+
+struct GuidanceLevelPicker: View {
+    let coordinator: ConversationCoordinator
+    private var level: GuidanceLevel { coordinator.store.preferences.guidanceLevel }
+    var body: some View {
+        Picker("Your level", selection: Binding(get: { level }, set: { coordinator.selectGuidanceLevel($0) })) {
+            ForEach(GuidanceLevel.allCases) { level in Text(level.title).tag(level) }
+        }
+        .pickerStyle(.menu)
+        .accessibilityIdentifier("guidance-level-picker")
+        Text(level.detail(language: coordinator.language, meaningLanguage: coordinator.store.preferences.meaningLanguage))
+            .font(.footnote).foregroundStyle(MuralColor.secondary)
+            .accessibilityIdentifier("guidance-level-detail")
     }
 }
 

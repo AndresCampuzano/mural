@@ -12,6 +12,16 @@ final class MuralUITests: XCTestCase {
         XCTAssertTrue(element.isHittable)
     }
 
+    /// Steps through the level chooser, which sits between the language and subtitle steps.
+    private func passLevelStep(_ app: XCUIApplication, choosing level: String = "starting-out") {
+        let option = app.buttons["onboarding-level-\(level)"]
+        XCTAssertTrue(option.waitForExistence(timeout: 5))
+        reveal(option, in: app)
+        option.tap()
+        XCTAssertTrue(option.isSelected)
+        app.buttons["onboarding-continue"].tap()
+    }
+
     private func checkNewOnboarding(id: String, greeting: String, romaji: String? = nil) {
         let app = XCUIApplication()
         app.launchArguments = ["--preview", "--preview-onboarding"]
@@ -24,6 +34,7 @@ final class MuralUITests: XCTestCase {
         let screen = XCTAttachment(screenshot: app.screenshot())
         screen.name = "Language selection - \(id)"; screen.lifetime = .keepAlways; add(screen)
         app.buttons["onboarding-continue"].tap()
+        passLevelStep(app)
         XCTAssertTrue(app.buttons["onboarding-meaning-picker"].waitForExistence(timeout: 5))
         app.buttons["onboarding-continue"].tap()
         XCTAssertTrue(app.staticTexts["target-caption"].waitForExistence(timeout: 5))
@@ -56,6 +67,7 @@ final class MuralUITests: XCTestCase {
         XCTAssertTrue(choice.isSelected)
         XCTAssertTrue(app.buttons["onboarding-continue"].isHittable)
         app.buttons["onboarding-continue"].tap()
+        passLevelStep(app)
         XCTAssertTrue(app.buttons["onboarding-meaning-picker"].waitForExistence(timeout: 5))
         let privacy = app.descendants(matching: .any).matching(identifier: "onboarding-privacy-policy").firstMatch
         reveal(privacy, in: app)
@@ -95,6 +107,7 @@ final class MuralUITests: XCTestCase {
         app.launch()
         XCTAssertTrue(app.buttons["onboarding-continue"].waitForExistence(timeout: 10))
         app.buttons["onboarding-continue"].tap()
+        passLevelStep(app)
         app.buttons["onboarding-meaning-picker"].tap()
         app.buttons["Chinese (Simplified)"].tap()
         XCTAssertEqual(app.staticTexts["onboarding-meaning-example"].label, "你好！")
@@ -170,6 +183,38 @@ final class MuralUITests: XCTestCase {
         XCTAssertTrue(app.buttons["start-conversation"].exists)
     }
 
+    func testSettingsOfferALevelAndASpeakingPace() {
+        let app = launch()
+        app.buttons["Settings"].tap()
+        let level = app.buttons["guidance-level-picker"]
+        XCTAssertTrue(level.waitForExistence(timeout: 5))
+        XCTAssertTrue(level.label.contains("In at the deep end"))
+        XCTAssertEqual(app.staticTexts["guidance-level-detail"].label, "Korean only, at a natural pace.")
+        level.tap()
+        app.buttons["Starting out"].tap()
+        XCTAssertEqual(app.staticTexts["guidance-level-detail"].label, "Mural speaks English and teaches Korean one short phrase at a time.")
+        let pace = app.buttons["speech-pace-picker"]
+        XCTAssertTrue(pace.label.contains("Slow"))
+        pace.tap()
+        app.buttons["Gentle"].tap()
+        XCTAssertTrue(app.buttons["speech-pace-picker"].label.contains("Gentle"))
+        app.buttons["Done"].tap()
+        app.buttons["Settings"].tap()
+        XCTAssertTrue(app.buttons["guidance-level-picker"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["guidance-level-picker"].label.contains("Starting out"))
+        XCTAssertTrue(app.buttons["speech-pace-picker"].label.contains("Gentle"))
+        // The level belongs to no single module: switching target language renames it, nothing else.
+        app.buttons["learning-language-picker"].tap()
+        app.buttons["Japanese · Standard Japanese"].tap()
+        XCTAssertEqual(app.staticTexts["guidance-level-detail"].label, "Mural speaks English and teaches Japanese one short phrase at a time.")
+        XCTAssertTrue(app.buttons["guidance-level-picker"].label.contains("Starting out"))
+        app.buttons["guidance-level-picker"].tap()
+        app.buttons["In at the deep end"].tap()
+        XCTAssertEqual(app.staticTexts["guidance-level-detail"].label, "Japanese only, at a natural pace.")
+        app.buttons["Done"].tap()
+        XCTAssertEqual(app.staticTexts["target-caption"].label, "こんにちは！")
+    }
+
     func testSettingsKeepLicensesInNoticesWithoutTransportDetails() {
         let app = launch()
         app.buttons["Settings"].tap()
@@ -214,6 +259,15 @@ final class MuralUITests: XCTestCase {
         languageScreen.name = "Onboarding - language"; languageScreen.lifetime = .keepAlways; add(languageScreen)
         app.buttons["onboarding-language-ja"].tap()
         app.buttons["onboarding-continue"].tap()
+        XCTAssertTrue(app.buttons["onboarding-level-starting-out"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["onboarding-level-starting-out"].isSelected)
+        XCTAssertEqual(app.staticTexts["onboarding-level-pace"].label, "Mural will speak at a slow pace to start with.")
+        let levelScreen = XCTAttachment(screenshot: app.screenshot())
+        levelScreen.name = "Onboarding - level"; levelScreen.lifetime = .keepAlways; add(levelScreen)
+        app.buttons["onboarding-level-deep-end"].tap()
+        XCTAssertEqual(app.staticTexts["onboarding-level-pace"].label, "Mural will speak at a natural pace to start with.")
+        app.buttons["onboarding-level-starting-out"].tap()
+        app.buttons["onboarding-continue"].tap()
         XCTAssertTrue(app.buttons["onboarding-meaning-picker"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["onboarding-ai-consent"].exists)
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "onboarding-privacy-policy").firstMatch.exists)
@@ -238,12 +292,17 @@ final class MuralUITests: XCTestCase {
         XCTAssertTrue(app.buttons["onboarding-language-ja"].waitForExistence(timeout: 10))
         app.buttons["onboarding-language-ja"].tap()
         app.buttons["onboarding-continue"].tap()
+        passLevelStep(app)
         XCTAssertTrue(app.buttons["onboarding-meaning-picker"].waitForExistence(timeout: 5))
         app.buttons["onboarding-meaning-picker"].tap()
         app.buttons["Spanish"].tap()
         app.buttons["onboarding-back"].tap()
+        XCTAssertTrue(app.buttons["onboarding-level-starting-out"].waitForExistence(timeout: 5))
+        app.buttons["onboarding-back"].tap()
+        XCTAssertTrue(app.buttons["onboarding-language-ko"].waitForExistence(timeout: 5))
         app.buttons["onboarding-language-ko"].tap()
         app.buttons["onboarding-continue"].tap()
+        passLevelStep(app)
         XCTAssertEqual(app.staticTexts["onboarding-meaning-example"].label, "¡Hola!")
         app.buttons["onboarding-continue"].tap()
         XCTAssertTrue(app.staticTexts["target-caption"].waitForExistence(timeout: 5))

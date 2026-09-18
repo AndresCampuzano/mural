@@ -120,10 +120,18 @@ import MuralCore
         let learner = store.learner
         // Each new conversation starts fresh; learned vocabulary and difficulty still carry forward.
         let history: [[String: Any]] = []
-        let instructions = TeachingPolicy.voice(language: language, learner: learner, theme: selectedTheme, interests: store.preferences.interests, meaningLanguage: store.preferences.meaningLanguage)
+        let instructions = TeachingPolicy.voice(language: language, learner: learner, theme: selectedTheme, interests: store.preferences.interests,
+                                                meaningLanguage: store.preferences.meaningLanguage, level: store.preferences.guidanceLevel, pace: store.preferences.pace)
+        let speed = store.preferences.speed
         connectionTask = Task { [weak self] in
             guard let self else { return }
-            do { try await self.transport.connect(api: self.api, instructions: instructions, history: history) }
+            do {
+                try await self.transport.connect(api: self.api, instructions: instructions, history: history, speed: speed)
+                if !self.transport.paceApplied, self.session?.id == generation {
+                    let reason = self.transport.paceRejection.map { " OpenAI said: \($0)" } ?? ""
+                    self.notice = "Mural is speaking at its normal speed: the voice model didn’t accept the pace setting.\(reason)"
+                }
+            }
             catch is CancellationError { return }
             catch {
                 guard self.session?.id == generation, self.state == .connecting || self.state == .active else { return }
@@ -155,6 +163,21 @@ import MuralCore
         lastAssessmentKey = ""; lastLanguageCheck = ""; pendingCommands = [:]
         inputLevel = 0; outputLevel = 0; state = .idle; isMuted = false
         store.selectLanguage(id)
+    }
+    /// The level changes the balance of languages, which the running conversation can adopt at once.
+    func selectGuidanceLevel(_ level: GuidanceLevel) {
+        guard level != store.preferences.guidanceLevel else { return }
+        store.updatePreferences { $0.guidanceLevelID = level.rawValue }
+        guard state == .active else { return }
+        append("instructions", TeachingPolicy.levelChange(language: language, level: level, meaningLanguage: store.preferences.meaningLanguage))
+        notice = "Mural will follow your new level from here."
+    }
+    /// The provider only accepts a speaking speed when a session is created, so a change during
+    /// a conversation waits for the next one.
+    func selectSpeechPace(_ pace: SpeechPace) {
+        guard pace != store.preferences.pace else { return }
+        store.updatePreferences { $0.speechSpeed = pace.speed }
+        if isRunning { notice = "Mural will speak at that pace in your next conversation." }
     }
     func selectMeaningLanguage(_ value: String) {
         guard MeaningLanguages.all.contains(value) else { return }
@@ -189,7 +212,7 @@ import MuralCore
     }
     func help() {
         guard state == .active else { return }
-        append("instructions", TeachingPolicy.help(language: language))
+        append("instructions", TeachingPolicy.help(language: language, level: store.preferences.guidanceLevel, meaningLanguage: store.preferences.meaningLanguage))
         notice = "Mural will make that a little simpler."
     }
     func end(reason: String = "Ended by you") {
@@ -260,7 +283,7 @@ import MuralCore
             guard state == .connecting else { return }
             state = .active; lastActivity = .now
             session?.providerID = (event["session"] as? [String: Any])?["id"] as? String
-            append("instructions", TeachingPolicy.greeting(language: language))
+            append("instructions", TeachingPolicy.greeting(language: language, level: store.preferences.guidanceLevel, meaningLanguage: store.preferences.meaningLanguage))
             startDurationChecks(); save()
         case "session.input_transcript.delta", "session.output_transcript.delta":
             guard state == .active || state == .closing, let delta = event["delta"] as? String,
@@ -396,12 +419,16 @@ import MuralCore
         }
     }
     private func checkLanguage() {
+        // At the beginner level Mural is meant to speak the learner's own language, so detecting
+        // it is not drift. The other levels still expect the target language to carry the turn.
+        let level = store.preferences.guidanceLevel
+        guard level.expectsTargetLanguageThroughout else { return }
         guard let p = assistantPassage, p.text.count > 70, p.id != lastLanguageCheck else { return }
         let recognizer = NLLanguageRecognizer(); recognizer.processString(p.text)
         if let detected = recognizer.languageHypotheses(withMaximum: 2).max(by: { $0.value < $1.value }),
            TeachingPolicy.shouldRedirectSpeech(language: language, detectedLanguageID: detected.key.rawValue, confidence: detected.value) {
             lastLanguageCheck = p.id
-            append("instructions", TeachingPolicy.redirect(language: language))
+            append("instructions", TeachingPolicy.redirect(language: language, level: level, meaningLanguage: store.preferences.meaningLanguage))
         }
     }
     private func addUsage(_ usage: APIUsage) {
@@ -418,7 +445,7 @@ import MuralCore
                 try await Task.sleep(for: .milliseconds(500))
                 guard self.session?.id == snapshot.id, self.state == .active, let current = self.session else { return }
                 guard let targetLanguage = LanguageRegistry.module(for: current.languageID) else { return }
-                let result = try await self.api.respond(instructions: TeachingPolicy.delegation(language: targetLanguage), input: TeachingPolicy.context(current), search: current.searchCalls < 3)
+                let result = try await self.api.respond(instructions: TeachingPolicy.delegation(language: targetLanguage, level: self.store.preferences.guidanceLevel, meaningLanguage: self.store.preferences.meaningLanguage), input: TeachingPolicy.context(current), search: current.searchCalls < 3)
                 guard self.session?.id == snapshot.id, self.state == .active else { return }
                 self.addUsage(result.usage)
                 if !result.sources.isEmpty {
@@ -442,7 +469,7 @@ import MuralCore
         save(); working = true
         defer { if session?.id == snapshot.id { working = false } }
         do {
-            let result = try await api.respond(instructions: TeachingPolicy.typedReply(language: language), input: TeachingPolicy.context(session!))
+            let result = try await api.respond(instructions: TeachingPolicy.typedReply(language: language, level: store.preferences.guidanceLevel, meaningLanguage: store.preferences.meaningLanguage), input: TeachingPolicy.context(session!))
             guard session?.id == snapshot.id, state == .active else { return }
             addUsage(result.usage)
             append("thinking", "The learner typed (data): \(String(clean.prefix(650)))")

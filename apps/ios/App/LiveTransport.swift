@@ -1,5 +1,6 @@
 import Foundation
 import AVFoundation
+import MuralCore
 @preconcurrency import WebRTC
 
 enum ConnectionState: Equatable { case idle, connecting, active, closing, ended, failed }
@@ -16,13 +17,20 @@ enum ConnectionState: Equatable { case idle, connecting, active, closing, ended,
     private var attempt = UUID()
     private(set) var started = false
     private(set) var isMuted = false
+    /// False when the provider rejected the speaking pace and the session was created without it.
+    private(set) var paceApplied = true
+    private(set) var paceRejection: String?
     private var closing = false
     private var ownsAudioActivation = false
     private var lastInput = 0.0, lastOutput = 0.0
 
-    func connect(api: APIClient, instructions: String, history: [[String: Any]]) async throws {
+    /// `speed` is the provider's playback multiple for generated speech. It is clamped to the
+    /// documented 0.25–1.5 range and can only be set between turns, so Mural sends it once here.
+    /// https://developers.openai.com/api/reference/resources/realtime/client-events
+    func connect(api: APIClient, instructions: String, history: [[String: Any]], speed: Double = 1) async throws {
         disconnect()
         closing = false
+        paceApplied = true; paceRejection = nil
         let token = UUID(); attempt = token
         let granted = await AVAudioApplication.requestRecordPermission()
         guard granted else { throw TransportError.microphone }
@@ -73,11 +81,26 @@ enum ConnectionState: Equatable { case idle, connecting, active, closing, ended,
             guard Date() < deadline else { throw TransportError.timeout }
         }
         guard let sdp = peer.localDescription?.sdp else { throw TransportError.connection }
-        let result = try await api.post("live/sessions", body: [
-            "session": ["model": "gpt-live-1", "instructions": instructions, "input": history,
-                        "store": false, "delegation": ["type": "client"], "audio": ["output": ["voice": "marin"]]],
-            "transport": ["type": "webrtc", "sdp": sdp]
-        ])
+        let outputSpeed = speed.isFinite ? min(SpeechPace.range.upperBound, max(SpeechPace.range.lowerBound, speed)) : 1
+        func createSession(withSpeed: Bool) async throws -> [String: Any] {
+            var output: [String: Any] = ["voice": "marin"]
+            if withSpeed { output["speed"] = outputSpeed }
+            return try await api.post("live/sessions", body: [
+                "session": ["model": "gpt-live-1", "instructions": instructions, "input": history,
+                            "store": false, "delegation": ["type": "client"], "audio": ["output": output]],
+                "transport": ["type": "webrtc", "sdp": sdp]
+            ])
+        }
+        // A rejected create is never billed and never opened a session, so the one retry here is
+        // safe. A pace this model will not accept must not cost the learner the conversation.
+        let wantsSpeed = outputSpeed != 1
+        let result: [String: Any]
+        do { result = try await createSession(withSpeed: wantsSpeed) }
+        catch APIClient.APIError.http(400, let detail) where wantsSpeed {
+            guard attempt == token else { throw CancellationError() }
+            paceApplied = false; paceRejection = detail
+            result = try await createSession(withSpeed: false)
+        }
         guard attempt == token else { throw CancellationError() }
         guard let transport = result["transport"] as? [String: Any], let answer = transport["sdp"] as? String else { throw TransportError.connection }
         if let session = result["session"] as? [String: Any] { onEvent?(["type": "mural.session.created", "session": session]) }
