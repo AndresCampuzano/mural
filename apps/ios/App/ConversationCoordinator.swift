@@ -19,6 +19,7 @@ import MuralCore
     var translating: Bool { meanings.isLoading }
     var meaningError: String? { meanings.error }
     private(set) var working = false
+    private(set) var phraseMeaningsLoading = false
     var error: String?
     var notice: String?
     var showSettings = false
@@ -42,6 +43,7 @@ import MuralCore
     private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
     private var resetTask: Task<Void, Never>?
     private var resetDeadline: Date?
+    private var phraseTask: Task<Void, Never>?
 
     init(store: LearningStore) {
         self.store = store
@@ -154,7 +156,7 @@ import MuralCore
     }
     func selectLanguage(_ id: String) {
         guard !isRunning, id != language.id, LanguageRegistry.module(for: id) != nil else { return }
-        cancelReset(); languageGeneration = UUID()
+        cancelReset(); languageGeneration = UUID(); phraseTask?.cancel()
         connectionTask?.cancel(); closeTask?.cancel(); durationTask?.cancel()
         meanings.reset(); assessmentTask?.cancel(); saveTask?.cancel(); saveTask = nil
         delegationTasks.values.forEach { $0.cancel() }; delegationTasks.removeAll()
@@ -331,6 +333,58 @@ import MuralCore
         meanings.update(request, cached: session.translations[request.cacheKey])
     }
     func retryMeaning() { scheduleTranslation(); meanings.retry() }
+
+    /// Target-language phrases in what Mural just said, offered for the saved list.
+    /// Empty before Mural has spoken, so the opening greeting is not offered as a find.
+    var capturablePhrases: [String] {
+        guard let passage = assistantPassage else { return [] }
+        return Phrases.candidates(in: passage.text, language: language)
+    }
+    func isPhraseSaved(_ text: String) -> Bool { store.isPhraseSaved(text) }
+    /// Saves at once and fetches the meanings afterwards, so a tap never waits on the network.
+    func savePhrases(_ texts: [String]) {
+        let added = store.savePhrases(texts, meaningLanguage: store.preferences.meaningLanguage, source: assistantPassage?.text ?? "")
+        guard !added.isEmpty else { return }
+        notice = added.count == 1 ? "Saved to your phrases." : "Saved \(added.count) phrases."
+        guard hasAIConsent else { return }
+        fetchMeanings(for: added, reportFailure: false)
+    }
+    /// Offered in the saved list for phrases whose meaning never arrived.
+    func refreshPhraseMeanings() {
+        let missing = store.savedPhrases.filter { $0.meaning.isEmpty }
+        guard !missing.isEmpty else { return }
+        guard hasAIConsent else { error = AIProcessingConsent.ConsentError.required.localizedDescription; return }
+        fetchMeanings(for: missing, reportFailure: true)
+    }
+    private func fetchMeanings(for phrases: [SavedPhrase], reportFailure: Bool) {
+        let batch = Array(phrases.prefix(Phrases.maximumPerLine))
+        guard !batch.isEmpty else { return }
+        let language = self.language, generation = languageGeneration, sessionID = session?.id
+        let meaningLanguage = store.preferences.meaningLanguage
+        phraseTask?.cancel()
+        phraseMeaningsLoading = true
+        phraseTask = Task { [weak self] in
+            guard let self else { return }
+            defer { self.phraseMeaningsLoading = false }
+            do {
+                let numbered = batch.enumerated().map { "\($0.offset + 1). \($0.element.text)" }.joined(separator: "\n")
+                let result = try await self.api.respond(instructions: TeachingPolicy.phraseMeanings(language: language, meaningLanguage: meaningLanguage),
+                                                        input: numbered, schema: APIClient.phraseMeaningSchema())
+                guard !Task.isCancelled, generation == self.languageGeneration else { return }
+                let decoded = try JSONDecoder().decode(PhraseMeanings.self, from: Data(result.text.utf8))
+                for (phrase, meaning) in zip(batch, decoded.meanings) where !meaning.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    self.store.setPhraseMeaning(phrase.id, meaning: meaning)
+                }
+                if self.session?.id == sessionID { self.addUsage(result.usage); self.scheduleSave() }
+            } catch is CancellationError { }
+            catch {
+                // The phrases themselves are saved; only their meanings are missing, and the
+                // saved list offers to fetch them again.
+                if reportFailure { self.error = error.localizedDescription }
+            }
+        }
+    }
+    private struct PhraseMeanings: Decodable { var meanings: [String] }
     func resetConversation() {
         guard !isRunning else { return }
         cancelReset(); meanings.reset(); saveTask?.cancel(); saveTask = nil

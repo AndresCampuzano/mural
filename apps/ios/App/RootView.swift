@@ -137,6 +137,7 @@ struct TalkView: View {
                     }.font(.caption).multilineTextAlignment(.center)
                 }
             }
+            PhraseChips(coordinator: coordinator)
             if let user = coordinator.userPassage {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Text("YOU").font(.system(.caption2, design: .rounded, weight: .medium))

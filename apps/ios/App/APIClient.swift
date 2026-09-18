@@ -75,6 +75,9 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
             "confidence": ["type": "number", "minimum": 0, "maximum": 1], "sourceIDs": ["type": "array", "items": string]
         ])]
     ]) }
+    static func phraseMeaningSchema() -> [String: Any] { object([
+        "meanings": ["type": "array", "maxItems": Phrases.maximumPerLine, "items": string]
+    ]) }
     enum APIError: LocalizedError {
         case missingKey, invalidResponse, incomplete, refused, http(Int, String?)
         var errorDescription: String? {

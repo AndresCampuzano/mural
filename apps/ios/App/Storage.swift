@@ -58,6 +58,33 @@ import MuralCore
         persist()
     }
     func deleteSession(_ id: UUID) { onSessionInvalidation?(id); archive.sessions.removeAll { $0.id == id }; persist() }
+    /// Phrases the learner kept, newest first. A notebook, never learning evidence.
+    var savedPhrases: [SavedPhrase] { archive.phrases.filter { $0.languageID == language.id }.sorted { $0.savedAt > $1.savedAt } }
+    func isPhraseSaved(_ text: String) -> Bool {
+        let key = language.id + "|" + SavedPhrase.normalize(text)
+        return archive.phrases.contains { $0.key == key }
+    }
+    /// Returns how many were new, so the interface can say what happened.
+    @discardableResult func savePhrases(_ texts: [String], meaningLanguage: String, source: String) -> [SavedPhrase] {
+        var kept = archive.phrases
+        var added: [SavedPhrase] = []
+        for text in texts {
+            let phrase = SavedPhrase(languageID: language.id, text: text, meaningLanguage: meaningLanguage, source: source)
+            guard !phrase.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                  !kept.contains(where: { $0.key == phrase.key }) else { continue }
+            kept.append(phrase); added.append(phrase)
+        }
+        guard !added.isEmpty else { return [] }
+        archive.savedPhrases = kept; persist()
+        return added
+    }
+    func setPhraseMeaning(_ id: UUID, meaning: String) {
+        guard let index = archive.phrases.firstIndex(where: { $0.id == id }) else { return }
+        var kept = archive.phrases
+        kept[index].meaning = String(meaning.prefix(300))
+        archive.savedPhrases = kept; persist()
+    }
+    func deletePhrase(_ id: UUID) { archive.savedPhrases = archive.phrases.filter { $0.id != id }; persist() }
     func hideWord(_ id: String) { archive.preferences.hiddenWords.append(id); persist() }
     func correctPassage(sessionID: UUID, passageID: String, text: String) {
         guard let index = archive.sessions.firstIndex(where: { $0.id == sessionID }),
@@ -78,7 +105,7 @@ import MuralCore
             }
         }
         archive.sessions.forEach { onSessionInvalidation?($0.id) }
-        archive.sessions = []; archive.preferences.hiddenWords = []; persist()
+        archive.sessions = []; archive.preferences.hiddenWords = []; archive.savedPhrases = nil; persist()
     }
     func exportData() throws -> Data { try archive.encoded() }
     func importData(_ data: Data) throws {

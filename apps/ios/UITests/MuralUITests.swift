@@ -352,6 +352,46 @@ final class MuralUITests: XCTestCase {
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "커피 한잔")).firstMatch.exists)
     }
 
+    func testAPhraseFromTheConversationCanBeKeptAndRemoved() {
+        let app = launch(ended: true)
+        XCTAssertTrue(app.buttons["new-conversation"].waitForExistence(timeout: 5))
+        let chip = app.buttons.matching(identifier: "phrase-chip").firstMatch
+        XCTAssertTrue(chip.waitForExistence(timeout: 5))
+        XCTAssertEqual(chip.label, "Save 저는 커피를 좋아해요")
+        // One phrase in the line, so there is nothing to save all of.
+        XCTAssertFalse(app.buttons["phrase-save-all"].exists)
+        chip.tap()
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label == %@", "저는 커피를 좋아해요, already saved")).firstMatch.waitForExistence(timeout: 5))
+        let screen = XCTAttachment(screenshot: app.screenshot())
+        screen.name = "Saving a phrase from the caption"; screen.lifetime = .keepAlways; add(screen)
+        app.tabBars.buttons["Words"].tap()
+        app.buttons["saved-phrases"].tap()
+        XCTAssertTrue(app.staticTexts["saved-phrase-text"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["saved-phrase-text"].label, "저는 커피를 좋아해요")
+        XCTAssertEqual(app.staticTexts["saved-phrase-meaning"].label, "No meaning yet")
+        XCTAssertTrue(app.buttons["saved-phrases-meanings"].exists)
+        app.staticTexts["saved-phrase-text"].swipeLeft()
+        app.buttons["Remove"].tap()
+        app.buttons["Remove phrase"].tap()
+        XCTAssertTrue(app.staticTexts["saved-phrases-empty"].waitForExistence(timeout: 5))
+        app.buttons["Done"].tap()
+    }
+
+    func testJapanesePhrasesAreOfferedFromAJapaneseConversation() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--preview", "--ended-conversation", "--preview-language=ja"]
+        app.launch()
+        XCTAssertTrue(app.buttons["new-conversation"].waitForExistence(timeout: 10))
+        let chip = app.buttons.matching(identifier: "phrase-chip").firstMatch
+        XCTAssertTrue(chip.waitForExistence(timeout: 5))
+        XCTAssertEqual(chip.label, "Save コーヒーが好きです")
+        chip.tap()
+        app.tabBars.buttons["Words"].tap()
+        app.buttons["saved-phrases"].tap()
+        XCTAssertEqual(app.staticTexts["saved-phrase-text"].label, "コーヒーが好きです")
+        XCTAssertEqual(app.staticTexts.matching(identifier: "reading-text").firstMatch.label, "kōhī ga suki desu")
+    }
+
     func testEndedConversationAutomaticallyReturnsToGreeting() {
         let app = launch(ended: true)
         XCTAssertTrue(app.buttons["new-conversation"].waitForExistence(timeout: 5))
