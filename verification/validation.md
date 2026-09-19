@@ -323,3 +323,57 @@ against fixed strings and the seeded preview conversation, not against real spee
 and the batched meaning request has never run against the provider. Whether the phrases Mural
 actually teaches are the ones worth keeping is unknown, and no proficient speaker has reviewed
 the meanings.
+
+## Long conversations heating the phone
+
+The complaint was that after a few minutes of talking the iPhone becomes hot and the interface
+slows down. Four things in the running conversation grew with the length of the transcript or
+ran far more often than they needed to.
+
+**The whole archive was re-encoded on the main thread on every save.** `LearningStore.persist`
+JSON-encoded every session ever recorded, pretty-printed and with sorted keys, and the running
+conversation called it through `scheduleSave` roughly every 750 ms. The cost grew with the
+transcript and with the learner's whole history, which is why it got worse the longer the app
+had been used. Conversation-rate saves are now coalesced, encoded compactly and encoded off the
+main actor; everything else — preferences, phrases, deletion, import — still writes at once.
+`flush()` makes a coalesced write durable when a conversation ends and when the app leaves the
+foreground, so the crash-loss window is a fraction of a second of transcript rather than
+nothing at all, and the version counter drops a write that a newer one has already overtaken.
+
+**The talk screen regrouped the entire transcript several times per frame.** `assistantPassage`,
+`userPassage`, `caption` and `capturablePhrases` each rebuilt every passage from every fragment,
+and audio levels arriving ten times a second invalidated the whole view. They are derived once
+per transcript change now, and the orb and status line — the only parts that follow the audio
+levels — read them in their own view, so a level change redraws the orb instead of the screen.
+
+**The language-drift check ran `NLLanguageRecognizer` on every transcript delta.** It only
+recorded the line once it had redirected, so a line that was not drifting was re-detected
+several times a second over text that had barely changed. The first check for a line is
+unchanged; a re-check now waits for the line to grow by 120 characters.
+
+**Appending a fragment regrouped every passage.** `SessionRecord.append` called
+`invalidateChangedAssessments`, which is linear in the whole conversation, for each of the
+several deltas arriving per second. Only a user passage ever carries an assessment and passages
+group per speaker, so an assistant fragment cannot invalidate one; that case and the
+no-assessments case now skip the rebuild.
+
+WebRTC statistics are also polled every 200 ms rather than every 100 ms, and a level that has
+settled is not republished, so silence stops redrawing the orb.
+
+- **102 core tests passed** (`swift test --package-path apps/ios`), including two new ones:
+  Mural's own speech never invalidating the learner's recorded evidence while the learner
+  speaking into the same passage still does, asserted for every registered module; and the
+  compact device encoding and the readable export decoding to the same record.
+- **20 native UI tests passed** on an iPhone 17 simulator running iOS 27.0, in
+  `.build/Heat-UI.xcresult`, unchanged from before: the orb and status line moving into their
+  own view leaves the talk screen, the caption, the phrase capsules and the transcript reading
+  exactly as they did. No test was added for the changes themselves.
+- The app builds for the simulator and for an iPhone 15 Pro Max, and is installed on it.
+
+Not verified: **no measurement.** Nothing here was profiled — not with Instruments, not with a
+thermal state reading, not with a before-and-after battery or CPU figure. The four changes were
+chosen by reading the hot paths, and every one of them is a real reduction in work per second,
+but whether they are enough to stop the phone getting hot is unknown until a long conversation
+is run on the device. The orb itself was left alone: it renders a mesh gradient, three blurs, a
+shadow and a mask at 30 fps whenever the Talk tab is open, including when no conversation is
+running, and that constant cost is untouched and unmeasured.

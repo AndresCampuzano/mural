@@ -23,6 +23,7 @@ enum ConnectionState: Equatable { case idle, connecting, active, closing, ended,
     private var closing = false
     private var ownsAudioActivation = false
     private var lastInput = 0.0, lastOutput = 0.0
+    private var reportedMuted = false
 
     /// `speed` is the provider's playback multiple for generated speech. It is clamped to the
     /// documented 0.25–1.5 range and can only be set between turns, so Mural sends it once here.
@@ -141,7 +142,7 @@ enum ConnectionState: Equatable { case idle, connecting, active, closing, ended,
             try? audio.setActive(false); audio.unlockForConfiguration()
             ownsAudioActivation = false
         }
-        lastInput = 0; lastOutput = 0; onLevels?(0, 0)
+        lastInput = 0; lastOutput = 0; reportedMuted = false; onLevels?(0, 0)
     }
     private func startMetering() {
         meterTask?.cancel()
@@ -157,12 +158,20 @@ enum ConnectionState: Equatable { case idle, connecting, active, closing, ended,
                     }
                     Task { @MainActor [weak self] in
                         guard let self, self.started else { return }
-                        self.lastInput = self.lastInput * 0.35 + min(1, input * 4) * 0.65
-                        self.lastOutput = self.lastOutput * 0.35 + min(1, output * 4) * 0.65
+                        let nextInput = self.lastInput * 0.35 + min(1, input * 4) * 0.65
+                        let nextOutput = self.lastOutput * 0.35 + min(1, output * 4) * 0.65
+                        // Every level reported redraws the orb. Building a statistics report and
+                        // publishing a level that has settled costs a conversation's worth of work
+                        // for a picture that does not change, so silence stops reporting.
+                        let settled = abs(nextInput - self.lastInput) < 0.004 && abs(nextOutput - self.lastOutput) < 0.004
+                            && self.isMuted == self.reportedMuted
+                        self.lastInput = nextInput; self.lastOutput = nextOutput
+                        guard !settled else { return }
+                        self.reportedMuted = self.isMuted
                         self.onLevels?(self.isMuted ? 0 : self.lastInput, self.lastOutput)
                     }
                 }
-                try? await Task.sleep(for: .milliseconds(100))
+                try? await Task.sleep(for: .milliseconds(200))
             }
         }
     }
