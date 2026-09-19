@@ -364,8 +364,11 @@ final class MuralUITests: XCTestCase {
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label == %@", "저는 커피를 좋아해요, already saved")).firstMatch.waitForExistence(timeout: 5))
         let screen = XCTAttachment(screenshot: app.screenshot())
         screen.name = "Saving a phrase from the caption"; screen.lifetime = .keepAlways; add(screen)
-        app.tabBars.buttons["Words"].tap()
-        app.buttons["saved-phrases"].tap()
+        // The confirmation leads to the kept phrases rather than only announcing the save.
+        let notice = app.buttons["notice-saved-phrases"]
+        XCTAssertTrue(notice.waitForExistence(timeout: 5))
+        XCTAssertEqual(notice.label, "Saved to your phrases. Open your saved phrases")
+        notice.tap()
         XCTAssertTrue(app.staticTexts["saved-phrase-text"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["saved-phrase-text"].label, "저는 커피를 좋아해요")
         XCTAssertEqual(app.staticTexts["saved-phrase-meaning"].label, "No meaning yet")
@@ -374,7 +377,24 @@ final class MuralUITests: XCTestCase {
         app.buttons["Remove"].tap()
         app.buttons["Remove phrase"].tap()
         XCTAssertTrue(app.staticTexts["saved-phrases-empty"].waitForExistence(timeout: 5))
-        app.buttons["Done"].tap()
+    }
+
+    /// The kept phrases are a tab of their own, reachable from anywhere without scrolling, and
+    /// they are not left behind at the bottom of Words.
+    func testKeptPhrasesAreOneTapAwayFromEveryScreen() {
+        let app = launch(ended: true)
+        XCTAssertTrue(app.buttons["new-conversation"].waitForExistence(timeout: 5))
+        let chip = app.buttons.matching(identifier: "phrase-chip").firstMatch
+        XCTAssertTrue(chip.waitForExistence(timeout: 5))
+        chip.tap()
+        for screen in ["Themes", "Words", "Talk"] {
+            app.tabBars.buttons[screen].tap()
+            app.tabBars.buttons["Phrases"].tap()
+            XCTAssertEqual(app.staticTexts["saved-phrase-text"].label, "저는 커피를 좋아해요", screen)
+        }
+        app.tabBars.buttons["Words"].tap()
+        XCTAssertFalse(app.buttons["saved-phrases"].exists)
+        XCTAssertTrue(app.buttons["Past conversations"].exists)
     }
 
     func testJapanesePhrasesAreOfferedFromAJapaneseConversation() {
@@ -386,8 +406,8 @@ final class MuralUITests: XCTestCase {
         XCTAssertTrue(chip.waitForExistence(timeout: 5))
         XCTAssertEqual(chip.label, "Save コーヒーが好きです")
         chip.tap()
-        app.tabBars.buttons["Words"].tap()
-        app.buttons["saved-phrases"].tap()
+        app.tabBars.buttons["Phrases"].tap()
+        XCTAssertTrue(app.staticTexts["saved-phrase-text"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["saved-phrase-text"].label, "コーヒーが好きです")
         XCTAssertEqual(app.staticTexts.matching(identifier: "reading-text").firstMatch.label, "kōhī ga suki desu")
     }

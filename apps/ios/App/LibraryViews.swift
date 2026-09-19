@@ -93,7 +93,6 @@ struct WordsView: View {
     @State private var search = ""
     @State private var selected: WordState?
     @State private var sessions = false
-    @State private var phrases = false
     private var learner: LearnerState { coordinator.store.learner }
     private var words: [WordState] { learner.words.filter { search.isEmpty || $0.lemma.localizedCaseInsensitiveContains(search) || $0.meaning.localizedCaseInsensitiveContains(search) } }
     var body: some View {
@@ -132,16 +131,12 @@ struct WordsView: View {
                         Text("Observed across conversations. These are provisional, not formal level certificates.").font(.footnote).foregroundStyle(MuralColor.secondary)
                     }.padding(22).background(MuralColor.butter, in: RoundedRectangle(cornerRadius: 24))
                 }
-                HStack(spacing: 18) {
-                    Button("Saved phrases", systemImage: "bookmark") { phrases = true }
-                        .accessibilityIdentifier("saved-phrases")
-                    Button("Past conversations", systemImage: "clock.arrow.circlepath") { sessions = true }
-                }.font(.subheadline).padding(.vertical, 8)
+                Button("Past conversations", systemImage: "clock.arrow.circlepath") { sessions = true }
+                    .font(.subheadline).padding(.vertical, 8)
             }.padding(26)
         }.foregroundStyle(MuralColor.ink).searchable(text: $search, prompt: "Find a word")
             .sheet(item: $selected) { word in WordDetailView(word: word, store: coordinator.store) }
             .sheet(isPresented: $sessions) { SessionHistoryView(store: coordinator.store) }
-            .sheet(isPresented: $phrases) { SavedPhrasesView(coordinator: coordinator) }
     }
 }
 

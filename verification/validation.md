@@ -377,3 +377,51 @@ but whether they are enough to stop the phone getting hot is unknown until a lon
 is run on the device. The orb itself was left alone: it renders a mesh gradient, three blurs, a
 shadow and a mask at 30 fps whenever the Talk tab is open, including when no conversation is
 running, and that constant cost is untouched and unmeasured.
+
+## Reaching the saved phrases
+
+The kept phrases were read through a button at the very bottom of the Words tab, below the word
+list, the recall-bar legend, the footnotes and the capabilities panel. Nothing announced it and
+you had to scroll past everything else to find it.
+
+They are now a **tab of their own**, beside Talk, Themes and Words. That is one tap from
+anywhere, including mid-conversation, and it also says something the old placement contradicted:
+a recall bar is earned by retrieving a word in conversation and a kept phrase is only a
+bookmark, so the two lists are different in kind and no longer sit one inside the other. The tab
+opens with the same `PageHeading` the other tabs use, and keeps the swipe-to-remove, the
+confirmation and the "Find the missing meanings" row. The buried button is gone; **Past
+conversations** stays on Words.
+
+Saving a phrase used to print "Saved to your phrases." and stop there. The confirmation is now a
+capsule with a chevron that opens the tab, so the way in is offered at the moment the phrase
+matters.
+
+The orb gives up room once a conversation is running — 220pt to 150pt, and 170pt to 120pt at
+accessibility text sizes — and returns to full size when the conversation ends. The phrase
+capsules, which shared a phone's width side by side and truncated the middle of every phrase as
+soon as Mural offered more than one, are now one full-width row each, stacked, each wrapping
+rather than eliding. The two changes are the same change: the orb yields the room the rows need.
+
+- **102 core tests passed.** No core behaviour changed; this is interface only.
+- **21 native UI tests passed** on an iPhone 17 simulator running iOS 27.0, in
+  `.build/Phrases-Tab-UI.xcresult`, including one new one: a phrase kept from the caption is
+  reachable through the Phrases tab from Themes, Words and Talk in turn, and the old
+  `saved-phrases` button is gone from Words while **Past conversations** remains. The Korean
+  phrase test now goes through the confirmation capsule rather than through Words, and the
+  Japanese one through the tab.
+
+Two mistakes were made and corrected, both of which would have shipped silently:
+
+- The notice's destination was first carried by a `didSet` on `notice`. `@Observable` leaves a
+  property carrying an observer untracked, so notices would have stopped reaching the screen at
+  all. It is a computed property over its own storage instead.
+- `.accessibilityIdentifier` was left on the phrase rows' `VStack` after it stopped being a
+  `ScrollView`. An accessibility modifier on a bare stack collapses it into a single element and
+  the rows stopped being offered as separate buttons — invisible on screen, but the three phrase
+  UI tests failed on it and VoiceOver would have lost them. The identifier was unused and is
+  gone.
+
+Not verified: the stacked rows have only been seen against the seeded preview line, which offers
+one phrase. How a real conversation's six candidates look on a small phone, and whether the
+smaller orb still reads as the thing you are talking to, have not been checked beyond a hands-on
+pass on a physical iPhone.
