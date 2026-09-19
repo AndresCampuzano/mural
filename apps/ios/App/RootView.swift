@@ -20,11 +20,12 @@ struct RootView: View {
     var body: some View {
         @Bindable var coordinator = coordinator
         TabView(selection: $tab) {
-            Tab("Talk", systemImage: "waveform", value: 0) { shell { TalkView(coordinator: coordinator) } }
+            Tab("Talk", systemImage: "waveform", value: 0) { shell { TalkView(coordinator: coordinator) { tab = 3 } } }
             Tab("Themes", systemImage: "square.grid.2x2", value: 1) {
                 shell { ThemesView(coordinator: coordinator) { theme in coordinator.chooseTheme(theme); tab = 0 } }
             }
             Tab("Words", systemImage: "book", value: 2) { shell { WordsView(coordinator: coordinator) } }
+            Tab("Phrases", systemImage: "bookmark", value: 3) { shell { PhrasesView(coordinator: coordinator) } }
         }
         .tint(MuralColor.ink)
         .sheet(isPresented: $coordinator.showSettings) { SettingsView(coordinator: coordinator) }
@@ -71,6 +72,8 @@ struct RootView: View {
 
 struct TalkView: View {
     @Bindable var coordinator: ConversationCoordinator
+    /// Opens the kept phrases, so the confirmation after saving one leads somewhere.
+    var showPhrases: () -> Void = {}
     @Environment(\.dynamicTypeSize) private var typeSize
     @State private var typing = false
     @State private var transcript: SessionRecord?
@@ -100,9 +103,7 @@ struct TalkView: View {
                                 .accessibilityIdentifier("new-conversation")
                         }
                     }.font(.caption).padding(.top, 6).padding(.bottom, 12)
-                    if let notice = coordinator.notice {
-                        Text(notice).font(.footnote).foregroundStyle(MuralColor.secondary).multilineTextAlignment(.center).padding(.bottom, 12)
-                    }
+                    if let notice = coordinator.notice { noticeView(notice) }
                 }.padding(.horizontal, 30).frame(maxWidth: .infinity).frame(minHeight: geometry.size.height)
             }.scrollIndicators(.hidden)
         }
@@ -112,6 +113,26 @@ struct TalkView: View {
             TranscriptView(session: session, meaningLanguage: coordinator.store.preferences.meaningLanguage)
         }
         .sheet(item: $lookup) { item in LookupView(item: item, coordinator: coordinator) }
+    }
+    /// A notice that leads somewhere is a control, not a sentence. A footnote-sized label in a
+    /// plain button collapses to a hairline tap target, so it is padded and given its own shape.
+    @ViewBuilder private func noticeView(_ notice: String) -> some View {
+        if coordinator.noticeDestination == .savedPhrases {
+            Button(action: showPhrases) {
+                HStack(spacing: 5) {
+                    Text(notice)
+                    Image(systemName: "chevron.right").font(.caption2)
+                }
+                .padding(.horizontal, 14).padding(.vertical, 9)
+                .background(MuralColor.sage, in: Capsule())
+                .contentShape(Capsule())
+            }.buttonStyle(.plain).font(.footnote).foregroundStyle(MuralColor.ink)
+                .padding(.bottom, 12)
+                .accessibilityLabel("\(notice) Open your saved phrases")
+                .accessibilityIdentifier("notice-saved-phrases")
+        } else {
+            Text(notice).font(.footnote).foregroundStyle(MuralColor.secondary).multilineTextAlignment(.center).padding(.bottom, 12)
+        }
     }
     private var captionArea: some View {
         VStack(spacing: 12) {
@@ -200,10 +221,20 @@ struct TalkView: View {
 private struct OrbPanel: View {
     let coordinator: ConversationCoordinator
     @Environment(\.dynamicTypeSize) private var typeSize
+    /// Full size while the orb is the whole screen, and smaller once a conversation is running,
+    /// where the caption and the phrases worth keeping need the room more than it does.
+    private var size: CGSize {
+        switch (coordinator.isRunning, typeSize.isAccessibilitySize) {
+        case (true, true): CGSize(width: 120, height: 128)
+        case (true, false): CGSize(width: 150, height: 152)
+        case (false, true): CGSize(width: 170, height: 180)
+        case (false, false): CGSize(width: 220, height: 222)
+        }
+    }
     var body: some View {
         VStack(spacing: 0) {
             MuralOrb(energy: max(coordinator.outputLevel, coordinator.inputLevel * 0.45), listening: coordinator.state == .active && !coordinator.isMuted, active: coordinator.state != .closing)
-                .frame(width: typeSize.isAccessibilitySize ? 170 : 220, height: typeSize.isAccessibilitySize ? 180 : 222).padding(.vertical, 8)
+                .frame(width: size.width, height: size.height).padding(.vertical, 8)
             Text(coordinator.status).font(.system(.caption, design: .rounded)).foregroundStyle(MuralColor.secondary)
                 .contentTransition(.numericText()).padding(.top, 6).padding(.bottom, 16).accessibilityAddTraits(.updatesFrequently)
                 .accessibilityIdentifier("conversation-status")

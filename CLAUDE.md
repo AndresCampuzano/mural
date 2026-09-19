@@ -89,9 +89,12 @@ repeating a phrase Mural has just said is still downgraded to `assisted`.
 ### Saved phrases
 
 When Mural uses target-language phrases in a line, `Phrases.candidates` finds them and the Talk
-screen offers one capsule each, plus **Save all**, in a single horizontally scrolling row. Kept
-phrases live in `Archive.savedPhrases` and are read in **Words → Saved phrases**, target text
-first with its meaning underneath.
+screen offers one full-width row each, plus **Save all**, stacked so every phrase is read
+whole rather than truncated into an ellipsis. Kept
+phrases live in `Archive.savedPhrases` and are read in the **Phrases** tab, target text first
+with its meaning underneath. Saving one shows a confirmation on the Talk screen that opens that
+tab, and the tab is a peer of Words rather than something inside it, because a recall bar is
+earned in conversation and a kept phrase is only a bookmark.
 
 This list is a notebook, **not evidence**. `LearningEngine` never reads it, saving grants no
 recall bar, and the interface says so. Keep it that way: the bars mean retrieval in

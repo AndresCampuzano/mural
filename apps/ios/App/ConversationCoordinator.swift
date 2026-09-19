@@ -21,7 +21,19 @@ import MuralCore
     private(set) var working = false
     private(set) var phraseMeaningsLoading = false
     var error: String?
-    var notice: String?
+    /// Where a notice leads, when it leads anywhere. Setting `notice` adopts the destination
+    /// staged for it and clears the staging, so an unrelated notice never inherits another's.
+    /// Written as a computed property over its own storage rather than with a `didSet`, because
+    /// `@Observable` leaves a property carrying an observer untracked and the notice would stop
+    /// reaching the screen.
+    enum NoticeDestination: Equatable { case none, savedPhrases }
+    var notice: String? {
+        get { noticeText }
+        set { noticeText = newValue; noticeDestination = stagedNoticeDestination; stagedNoticeDestination = .none }
+    }
+    private var noticeText: String?
+    private(set) var noticeDestination: NoticeDestination = .none
+    private var stagedNoticeDestination: NoticeDestination = .none
     var showSettings = false
     var showAIConsent = false
     private var startAfterConsent = false
@@ -353,6 +365,7 @@ import MuralCore
     func savePhrases(_ texts: [String]) {
         let added = store.savePhrases(texts, meaningLanguage: store.preferences.meaningLanguage, source: assistantPassage?.text ?? "")
         guard !added.isEmpty else { return }
+        stagedNoticeDestination = .savedPhrases
         notice = added.count == 1 ? "Saved to your phrases." : "Saved \(added.count) phrases."
         guard hasAIConsent else { return }
         fetchMeanings(for: added, reportFailure: false)
