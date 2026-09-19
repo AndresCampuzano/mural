@@ -17,6 +17,12 @@ import MuralCore
     let container: ModelContainer
     private var document: StoredArchive
     private let migrationBackupURL: URL?
+    /// Every change re-encodes the whole archive, so conversation-rate writes are counted here
+    /// and written once they settle. `version` is the change the archive is on; `writtenVersion`
+    /// is the newest change already on disk.
+    private var version = 0
+    private var writtenVersion = 0
+    private var persistTask: Task<Void, Never>?
     init(inMemory: Bool = false) throws {
         migrationBackupURL = inMemory ? nil : URL.applicationSupportDirectory
             .appendingPathComponent("Mural", isDirectory: true)
@@ -52,10 +58,19 @@ import MuralCore
         archive.preferences.learningLanguageID = id; persist()
     }
     func updatePreferences(_ change: (inout Preferences) -> Void) { change(&archive.preferences); persist() }
+    /// A running conversation saves its transcript a few times a second. Coalesce those writes
+    /// rather than re-encoding the whole archive each time; `flush()` makes them durable.
     func save(_ session: SessionRecord) {
         if let i = archive.sessions.firstIndex(where: { $0.id == session.id }) { archive.sessions[i] = session }
         else { archive.sessions.append(session) }
-        persist()
+        schedulePersist()
+    }
+    /// Writes a coalesced conversation save at once. Called when a conversation ends and when
+    /// the app leaves the foreground, so nothing waits on a timer to become durable.
+    func flush() {
+        guard version > writtenVersion else { return }
+        persistTask?.cancel(); persistTask = nil
+        commit(version)
     }
     func deleteSession(_ id: UUID) { onSessionInvalidation?(id); archive.sessions.removeAll { $0.id == id }; persist() }
     /// Phrases the learner kept, newest first. A notebook, never learning evidence.
@@ -113,9 +128,44 @@ import MuralCore
         archive = try archive.merging(imported)
         persist()
     }
+    private static let saveFailure = "Mural couldn’t save your progress. Please export a backup and try again."
     private func persist() {
-        do { document.payload = try archive.encoded(); try container.mainContext.save(); error = nil }
-        catch { self.error = "Mural couldn’t save your progress. Please export a backup and try again." }
+        persistTask?.cancel(); persistTask = nil
+        version += 1
+        commit(version)
+    }
+    private func schedulePersist() {
+        version += 1
+        guard persistTask == nil else { return }
+        persistTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(600))
+            guard let self, !Task.isCancelled else { return }
+            self.persistTask = nil
+            await self.commitCoalesced()
+        }
+    }
+    /// Encodes off the main actor, so a long transcript does not spend the main thread on JSON
+    /// while the conversation is running.
+    private func commitCoalesced() async {
+        let target = version
+        guard target > writtenVersion else { return }
+        let snapshot = archive
+        guard let payload = await Task.detached(priority: .utility, operation: { try? snapshot.encoded(pretty: false) }).value else {
+            self.error = Self.saveFailure; return
+        }
+        // A later write may have landed while this one was encoding.
+        guard target > writtenVersion else { return }
+        store(payload, version: target)
+    }
+    private func commit(_ target: Int) {
+        guard let payload = try? archive.encoded(pretty: false) else { self.error = Self.saveFailure; return }
+        store(payload, version: target)
+    }
+    private func store(_ payload: Data, version target: Int) {
+        writtenVersion = max(writtenVersion, target)
+        document.payload = payload
+        do { try container.mainContext.save(); error = nil }
+        catch { self.error = Self.saveFailure }
     }
 }
 

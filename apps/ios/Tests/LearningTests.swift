@@ -21,6 +21,45 @@ final class LearningTests: XCTestCase {
         let f = [Fragment(id: "a", speaker: .assistant, text: "오늘", startMS: 0, endMS: 100), Fragment(id: "b", speaker: .assistant, text: " 뭐 했어요?", startMS: 100, endMS: 400)]
         XCTAssertEqual(Transcript.passages(f).first?.text, "오늘 뭐 했어요?")
     }
+    /// Appending skips the passage rebuild when nothing it protects can have changed. The
+    /// guarantee is that recorded evidence still disappears the moment its own passage is
+    /// rewritten, and that Mural's own speech never quietly takes evidence away.
+    func testMuralsOwnSpeechNeverInvalidatesTheLearnersEvidence() {
+        for module in LanguageRegistry.all {
+            var session = fixture()
+            let before = session.assessments
+            session.append(Fragment(speaker: .assistant, text: module.greeting, startMS: 2100, endMS: 2600))
+            session.append(Fragment(speaker: .assistant, text: module.greeting, startMS: 2600, endMS: 3000))
+            XCTAssertEqual(session.assessments.map(\.revisionKey), before.map(\.revisionKey), module.id)
+            XCTAssertEqual(session.passages.count, 2, module.id)
+            XCTAssertNotNil(LearningEngine.validate(session.assessments[0], session: session), module.id)
+            // The learner speaking into the same passage still invalidates it.
+            session.append(Fragment(speaker: .user, text: " 아마도", startMS: 2200, endMS: 2400))
+            XCTAssertEqual(session.assessments.count, 0, module.id)
+        }
+    }
+    /// The copy kept on the device is rewritten on every change, so it is encoded compactly.
+    /// Exports stay readable, and both decode to the same learning record.
+    func testCompactAndReadableEncodingsCarryTheSameRecord() throws {
+        var archive = Archive()
+        archive.sessions = LanguageRegistry.all.map { fixtureFor($0.id) }
+        let readable = try archive.encoded()
+        let compact = try archive.encoded(pretty: false)
+        XCTAssertLessThan(compact.count, readable.count)
+        let fromReadable = try Archive.decode(readable), fromCompact = try Archive.decode(compact)
+        XCTAssertEqual(fromCompact.sessions.map(\.id), fromReadable.sessions.map(\.id))
+        XCTAssertEqual(fromCompact.sessions.map { $0.passages.map(\.text) }, fromReadable.sessions.map { $0.passages.map(\.text) })
+        XCTAssertEqual(fromCompact.sessions.flatMap { $0.assessments.flatMap { $0.words.map(\.key) } },
+                       fromReadable.sessions.flatMap { $0.assessments.flatMap { $0.words.map(\.key) } })
+    }
+    private func fixtureFor(_ languageID: String) -> SessionRecord {
+        let date = Date(timeIntervalSince1970: 1_780_000_000)
+        let text = LanguageRegistry.module(for: languageID)?.greeting ?? ""
+        var session = SessionRecord(languageID: languageID, themeID: "walk")
+        session.startedAt = date
+        session.append(Fragment(speaker: .user, text: text, startMS: 1000, endMS: 2000, receivedAt: date))
+        return session
+    }
     func testLateFragmentsRebuildEarlierPassageAndInvalidateEvidence() {
         var s = fixture()
         s.append(Fragment(id: "late", speaker: .user, text: " 아마도", startMS: 2100, endMS: 2500))

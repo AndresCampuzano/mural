@@ -36,6 +36,8 @@ import MuralCore
     private var observers: [NSObjectProtocol] = []
     private var lastActivity = Date()
     private var lastLanguageCheck = ""
+    private var languageCheckedPassage = ""
+    private var languageCheckedLength = 0
     private var pendingCommands: [String: Date] = [:]
     private var lastAssessmentKey = ""
     private var pendingTopic: TopicBrief?
@@ -67,7 +69,7 @@ import MuralCore
         finalAssessments.onResult = { [weak self] result in
             guard let self, let updated = result.applying(to: self.store.sessions.first(where: { $0.id == result.sessionID })) else { return }
             self.store.save(updated)
-            if self.session?.id == updated.id { self.session = updated }
+            if self.session?.id == updated.id { self.session = updated; self.refreshTranscript() }
         }
         store.onSessionInvalidation = { [weak self] id in self?.finalAssessments.cancel(id) }
         transport.onEvent = { [weak self] in self?.handle($0) }
@@ -84,9 +86,21 @@ import MuralCore
     }
     var isRunning: Bool { state == .active || state == .connecting || state == .closing }
     var language: LanguageModule { store.language }
-    var assistantPassage: Passage? { session?.passages.last(where: { $0.speaker == .assistant }) }
-    var userPassage: Passage? { session?.passages.last(where: { $0.speaker == .user }) }
+    /// Grouping the transcript into passages is linear in the whole conversation, and the talk
+    /// screen reads all three of these while the orb animates. Deriving them once per transcript
+    /// change keeps a long conversation from regrouping itself on every frame.
+    private(set) var assistantPassage: Passage?
+    private(set) var userPassage: Passage?
+    /// Target-language phrases in what Mural just said, offered for the saved list.
+    /// Empty before Mural has spoken, so the opening greeting is not offered as a find.
+    private(set) var capturablePhrases: [String] = []
     var caption: String { assistantPassage?.text ?? language.greeting }
+    private func refreshTranscript() {
+        let passages = session?.passages ?? []
+        assistantPassage = passages.last { $0.speaker == .assistant }
+        userPassage = passages.last { $0.speaker == .user }
+        capturablePhrases = assistantPassage.map { Phrases.candidates(in: $0.text, language: language) } ?? []
+    }
     var status: String {
         switch state {
         case .idle: "Ready when you are"
@@ -113,11 +127,11 @@ import MuralCore
         guard CredentialStore.hasKey else { showSettings = true; return }
         cancelReset(); meanings.reset()
         error = nil; notice = nil; lastAssessmentKey = ""
-        lastLanguageCheck = ""; pendingCommands = [:]
+        resetLanguageCheck(); pendingCommands = [:]
         state = .connecting; isMuted = false
         var record = SessionRecord(languageID: language.id, themeID: selectedTheme?.id, title: selectedTheme?.title)
         if let pendingTopic { record.topics = [pendingTopic] }
-        session = record; store.save(record)
+        session = record; refreshTranscript(); store.save(record)
         let generation = record.id
         let learner = store.learner
         // Each new conversation starts fresh; learned vocabulary and difficulty still carry forward.
@@ -160,9 +174,9 @@ import MuralCore
         connectionTask?.cancel(); closeTask?.cancel(); durationTask?.cancel()
         meanings.reset(); assessmentTask?.cancel(); saveTask?.cancel(); saveTask = nil
         delegationTasks.values.forEach { $0.cancel() }; delegationTasks.removeAll()
-        session = nil; selectedTheme = nil; pendingTopic = nil
+        session = nil; refreshTranscript(); selectedTheme = nil; pendingTopic = nil
         working = false; notice = nil; error = nil
-        lastAssessmentKey = ""; lastLanguageCheck = ""; pendingCommands = [:]
+        lastAssessmentKey = ""; resetLanguageCheck(); pendingCommands = [:]
         inputLevel = 0; outputLevel = 0; state = .idle; isMuted = false
         store.selectLanguage(id)
     }
@@ -247,7 +261,7 @@ import MuralCore
         delegationTasks.values.forEach { $0.cancel() }; delegationTasks.removeAll()
         transport.disconnect(); pendingCommands = [:]; working = false
         session?.endedAt = .now; session?.usageFinal = final
-        save(); state = .ended
+        save(); store.flush(); state = .ended
         if let session { finalAssessments.submit(session) }
         scheduleTranslation(); scheduleReset()
         if !final, session?.providerID != nil { notice = "Conversation saved. Final voice usage is unconfirmed." }
@@ -293,7 +307,7 @@ import MuralCore
             let speaker: Speaker = type == "session.input_transcript.delta" ? .user : .assistant
             let fragment = Fragment(id: event["event_id"] as? String ?? UUID().uuidString, speaker: speaker, text: delta,
                                     startMS: start, endMS: end, meaningVisible: store.preferences.meaningVisible)
-            session?.append(fragment); lastActivity = .now; scheduleSave()
+            session?.append(fragment); refreshTranscript(); lastActivity = .now; scheduleSave()
             if speaker == .assistant { scheduleTranslation(); if state == .active { checkLanguage() } }
             else if state == .active { scheduleAssessment() }
         case "session.delegation.created":
@@ -334,12 +348,6 @@ import MuralCore
     }
     func retryMeaning() { scheduleTranslation(); meanings.retry() }
 
-    /// Target-language phrases in what Mural just said, offered for the saved list.
-    /// Empty before Mural has spoken, so the opening greeting is not offered as a find.
-    var capturablePhrases: [String] {
-        guard let passage = assistantPassage else { return [] }
-        return Phrases.candidates(in: passage.text, language: language)
-    }
     func isPhraseSaved(_ text: String) -> Bool { store.isPhraseSaved(text) }
     /// Saves at once and fetches the meanings afterwards, so a tap never waits on the network.
     func savePhrases(_ texts: [String]) {
@@ -389,7 +397,7 @@ import MuralCore
         guard !isRunning else { return }
         cancelReset(); meanings.reset(); saveTask?.cancel(); saveTask = nil
         languageGeneration = UUID()
-        session = nil; selectedTheme = nil; pendingTopic = nil
+        session = nil; refreshTranscript(); selectedTheme = nil; pendingTopic = nil
         notice = nil; error = nil; working = false; isMuted = false
         inputLevel = 0; outputLevel = 0; state = .idle
     }
@@ -418,7 +426,7 @@ import MuralCore
         let sample = ["ko": "저는 커피를 좋아해요.", "ja": "コーヒーが好きです。"]
         record.append(Fragment(speaker: .assistant, text: sample[language.id] ?? language.greeting, startMS: 0, endMS: 1000))
         record.translations[MeaningRequest.cacheKey(revisionKey: record.passages[0].revisionKey, language: "English")] = "I like coffee."
-        session = record; state = .closing; finish(final: true)
+        session = record; refreshTranscript(); state = .closing; finish(final: true)
     }
     #endif
     #if DEBUG && targetEnvironment(simulator)
@@ -433,7 +441,7 @@ import MuralCore
         record.append(Fragment(speaker: .assistant, text: "커피 한 잔이요! 뭐 좀 드실래요?", startMS: 2800, endMS: 6000))
         let passage = record.passages.last!
         record.translations[MeaningRequest.cacheKey(revisionKey: passage.revisionKey, language: "English")] = "One coffee! Would you like something to eat?"
-        session = record; state = .active; outputLevel = 0.18
+        session = record; refreshTranscript(); state = .active; outputLevel = 0.18
         scheduleTranslation()
     }
     #endif
@@ -478,12 +486,20 @@ import MuralCore
         let level = store.preferences.guidanceLevel
         guard level.expectsTargetLanguageThroughout else { return }
         guard let p = assistantPassage, p.text.count > 70, p.id != lastLanguageCheck else { return }
+        // A line grows by a few characters per transcript delta. Detecting the language of every
+        // one of them runs the recognizer several times a second over text that has barely
+        // changed, so wait until the line has grown enough to read differently.
+        guard p.id != languageCheckedPassage || p.text.count >= languageCheckedLength + 120 else { return }
+        languageCheckedPassage = p.id; languageCheckedLength = p.text.count
         let recognizer = NLLanguageRecognizer(); recognizer.processString(p.text)
         if let detected = recognizer.languageHypotheses(withMaximum: 2).max(by: { $0.value < $1.value }),
            TeachingPolicy.shouldRedirectSpeech(language: language, detectedLanguageID: detected.key.rawValue, confidence: detected.value) {
             lastLanguageCheck = p.id
             append("instructions", TeachingPolicy.redirect(language: language, level: level, meaningLanguage: store.preferences.meaningLanguage))
         }
+    }
+    private func resetLanguageCheck() {
+        lastLanguageCheck = ""; languageCheckedPassage = ""; languageCheckedLength = 0
     }
     private func addUsage(_ usage: APIUsage) {
         session?.inputTokens += usage.input; session?.outputTokens += usage.output; session?.searchCalls += usage.searches
@@ -520,7 +536,7 @@ import MuralCore
         let offset = Int(Date().timeIntervalSince(snapshot.startedAt) * 1000)
         session?.append(Fragment(speaker: .user, text: String(clean.prefix(2000)), startMS: offset, endMS: offset + 1,
                                  meaningVisible: store.preferences.meaningVisible, typed: true))
-        save(); working = true
+        refreshTranscript(); save(); working = true
         defer { if session?.id == snapshot.id { working = false } }
         do {
             let result = try await api.respond(instructions: TeachingPolicy.typedReply(language: language, level: store.preferences.guidanceLevel, meaningLanguage: store.preferences.meaningLanguage), input: TeachingPolicy.context(session!))

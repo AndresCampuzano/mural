@@ -133,6 +133,11 @@ public struct SessionRecord: Codable, Identifiable, Sendable {
     public mutating func append(_ fragment: Fragment) {
         guard !fragments.contains(where: { $0.id == fragment.id }) else { return }
         fragments.append(fragment)
+        // Transcript deltas arrive several times a second and regrouping every passage to
+        // check them is linear in the whole conversation. Only a user passage ever carries an
+        // assessment, and passages group per speaker, so an assistant fragment cannot change
+        // one; with nothing recorded there is nothing to check either.
+        guard fragment.speaker == .user, !assessments.isEmpty else { return }
         invalidateChangedAssessments()
     }
     public mutating func invalidateChangedAssessments() {
@@ -281,8 +286,11 @@ public struct Archive: Codable, Sendable {
         root["schemaVersion"] = 2
         return try JSONSerialization.data(withJSONObject: root)
     }
-    public func encoded() throws -> Data {
-        let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+    /// Exports stay pretty-printed so a backup is readable. The copy kept on the device is
+    /// written on every change, so it is encoded compactly instead.
+    public func encoded(pretty: Bool = true) throws -> Data {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = pretty ? [.prettyPrinted, .sortedKeys] : [.sortedKeys]
         return try encoder.encode(self)
     }
 }

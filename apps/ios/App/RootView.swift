@@ -46,7 +46,7 @@ struct RootView: View {
             onboarding = !coordinator.store.preferences.hasOnboarded && !arguments.contains("--preview") && !AudioVerification.requested
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .background { coordinator.background() }
+            if phase == .background { coordinator.background(); coordinator.store.flush() }
             else if phase == .active { coordinator.resume() }
         }
         #if DEBUG
@@ -83,11 +83,7 @@ struct TalkView: View {
                         .font(.system(.caption, design: .rounded, weight: .medium)).foregroundStyle(MuralColor.secondary)
                         .padding(.horizontal, 14).padding(.vertical, 9).background(MuralColor.butter.opacity(0.58), in: Capsule()).padding(.top, 12)
                     Spacer(minLength: 8)
-                    MuralOrb(energy: max(coordinator.outputLevel, coordinator.inputLevel * 0.45), listening: coordinator.state == .active && !coordinator.isMuted, active: coordinator.state != .closing)
-                        .frame(width: typeSize.isAccessibilitySize ? 170 : 220, height: typeSize.isAccessibilitySize ? 180 : 222).padding(.vertical, 8)
-                    Text(coordinator.status).font(.system(.caption, design: .rounded)).foregroundStyle(MuralColor.secondary)
-                        .contentTransition(.numericText()).padding(.top, 6).padding(.bottom, 16).accessibilityAddTraits(.updatesFrequently)
-                        .accessibilityIdentifier("conversation-status")
+                    OrbPanel(coordinator: coordinator)
                     captionArea
                     Spacer(minLength: 12)
                     controls
@@ -195,6 +191,23 @@ struct TalkView: View {
             }.buttonStyle(.plain).accessibilityLabel(coordinator.isRunning ? "End conversation" : "Conversation transcript")
                 .disabled(coordinator.session == nil)
         }.foregroundStyle(MuralColor.ink)
+    }
+}
+
+/// The orb and the status line are the only parts of the talk screen that follow the audio
+/// levels, which arrive several times a second. They read them here rather than in `TalkView`,
+/// so a level change redraws the orb instead of the whole screen.
+private struct OrbPanel: View {
+    let coordinator: ConversationCoordinator
+    @Environment(\.dynamicTypeSize) private var typeSize
+    var body: some View {
+        VStack(spacing: 0) {
+            MuralOrb(energy: max(coordinator.outputLevel, coordinator.inputLevel * 0.45), listening: coordinator.state == .active && !coordinator.isMuted, active: coordinator.state != .closing)
+                .frame(width: typeSize.isAccessibilitySize ? 170 : 220, height: typeSize.isAccessibilitySize ? 180 : 222).padding(.vertical, 8)
+            Text(coordinator.status).font(.system(.caption, design: .rounded)).foregroundStyle(MuralColor.secondary)
+                .contentTransition(.numericText()).padding(.top, 6).padding(.bottom, 16).accessibilityAddTraits(.updatesFrequently)
+                .accessibilityIdentifier("conversation-status")
+        }
     }
 }
 
