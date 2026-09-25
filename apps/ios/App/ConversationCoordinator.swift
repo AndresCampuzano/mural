@@ -311,7 +311,8 @@ import MuralCore
             guard state == .connecting else { return }
             state = .active; lastActivity = .now
             session?.providerID = (event["session"] as? [String: Any])?["id"] as? String
-            append("instructions", TeachingPolicy.greeting(language: language, level: store.preferences.guidanceLevel, meaningLanguage: store.preferences.meaningLanguage))
+            append("instructions", TeachingPolicy.greeting(language: language, level: store.preferences.guidanceLevel, meaningLanguage: store.preferences.meaningLanguage,
+                                                            theme: selectedTheme, angle: Int.random(in: 0..<TeachingPolicy.openingAngles.count)))
             startDurationChecks(); save()
         case "session.input_transcript.delta", "session.output_transcript.delta":
             guard state == .active || state == .closing, let delta = event["delta"] as? String,

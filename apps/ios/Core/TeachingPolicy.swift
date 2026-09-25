@@ -27,9 +27,9 @@ public enum TeachingPolicy {
     private static func openingRule(_ level: GuidanceLevel, language: LanguageModule, meaningLanguage: String) -> String {
         switch level {
         case .startingOut:
-            "The learner has told you they are starting out, so begin there. Your first \(language.name) phrase is \(language.greeting): say it, give its meaning in \(meaningLanguage), and invite them to say it back. Ask one small question at a time and wait. If they show you they already understand more, say so warmly and move on rather than drilling them."
+            "The learner has told you they are starting out, so begin there. Take your first \(language.name) phrase from the Context below: something they can use in that situation straight away. Do not teach how to say hello every time; only open with a greeting lesson when the situation is itself about meeting someone. Ask one small question at a time and wait. If they show you they already understand more, say so warmly and move on rather than drilling them."
         default:
-            "Begin at the user's demonstrated ability, unknown at first. Your first greeting is \(language.greeting). Ask one small, natural question and wait. Let advanced speakers reveal their ability quickly; never force them through beginner exercises."
+            "Begin at the user's demonstrated ability, unknown at first. Greet briefly, for example with \(language.greeting), and move straight into the Context below with one small, natural question about it, then wait. Let advanced speakers reveal their ability quickly; never force them through beginner exercises."
         }
     }
 
@@ -72,12 +72,29 @@ public enum TeachingPolicy {
         """
     }
 
-    public static func greeting(language: LanguageModule, level: GuidanceLevel = .inAtTheDeepEnd, meaningLanguage: String = "English") -> String {
+    /// Ways into a conversation. The app picks one at random for each session, so a theme
+    /// opened twice does not begin with the same question.
+    public static let openingAngles = [
+        "Open by setting the scene in one short, vivid sentence, then offer the learner a simple choice.",
+        "Open as if the situation is already under way, and give the learner an easy first line to answer.",
+        "Open by asking about the learner's own experience of this kind of situation.",
+        "Open with a light question about what the learner likes or would prefer here.",
+        "Open with a small, friendly observation about the scene and a question that follows from it.",
+        "Open by asking what the learner would do first in this situation."
+    ]
+
+    /// The first thing Mural says. It follows the chosen theme, so each conversation begins in
+    /// its own situation rather than with the same greeting lesson.
+    public static func greeting(language: LanguageModule, level: GuidanceLevel = .inAtTheDeepEnd, meaningLanguage: String = "English",
+                                theme: ConversationTheme? = nil, angle: Int = 0) -> String {
+        let scene = theme.map { "The chosen situation: \($0.situation)" }
+            ?? "No situation is chosen: pick an everyday subject yourself, or one of the learner's interests, and vary it from one conversation to the next."
+        let way = openingAngles[abs(angle) % openingAngles.count]
         switch level {
         case .startingOut:
-            "Begin this new conversation now, without waiting for the learner to speak. Say hello in \(meaningLanguage) in one short sentence. Then teach ‘\(language.greeting)’: say it slowly in \(language.name), give its meaning in \(meaningLanguage), and invite the learner to say it back. Then pause and listen."
+            return "Begin this new conversation now, without waiting for the learner to speak. \(scene) Greet the learner in \(meaningLanguage) in one short sentence and bring them into the situation. \(way) Then teach one short \(language.name) phrase that is useful right away in this situation. Do not make it a greeting unless the situation is about meeting someone. Say it slowly, give its meaning in \(meaningLanguage), and invite the learner to try it. Then pause and listen."
         default:
-            "Begin this new conversation now, without waiting for the learner to speak. Say ‘\(language.greeting)’ in \(language.name) and ask one short, natural question. Then pause and listen. All speech must be in \(language.name)."
+            return "Begin this new conversation now, without waiting for the learner to speak. \(scene) Greet the learner briefly in \(language.name) and move straight into the situation. \(way) Ask one short, natural question tied to it; do not open with a lesson on how to say hello. Then pause and listen. All speech must be in \(language.name)."
         }
     }
     public static func help(language: LanguageModule, level: GuidanceLevel = .inAtTheDeepEnd, meaningLanguage: String = "English") -> String {

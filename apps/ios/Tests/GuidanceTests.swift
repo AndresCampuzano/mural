@@ -113,11 +113,36 @@ final class GuidanceTests: XCTestCase {
             XCTAssertTrue(prompt.contains(language.speechGuidance), language.id)
             XCTAssertTrue(prompt.contains(language.writingGuidance), language.id)
             XCTAssertTrue(TeachingPolicy.greeting(language: language, level: .startingOut, meaningLanguage: meaning)
-                .contains("Say hello in \(meaning)"), language.id)
+                .contains("Greet the learner in \(meaning)"), language.id)
             XCTAssertTrue(TeachingPolicy.help(language: language, level: .startingOut, meaningLanguage: meaning)
                 .contains("Explain the last idea simply in \(meaning)"), language.id)
             XCTAssertTrue(TeachingPolicy.typedReply(language: language, level: .startingOut, meaningLanguage: meaning)
                 .contains("Reply in \(meaning)"), language.id)
+        }
+    }
+
+    /// The opener follows the chosen theme and a randomly picked way in, instead of always
+    /// teaching the same greeting.
+    func testTheOpenerFollowsTheThemeAndVariesInsteadOfAlwaysTeachingHello() {
+        for language in LanguageRegistry.all {
+            let other = LanguageRegistry.all.first { $0.id != language.id }!.name
+            let themes = language.themes.prefix(3) + (language.course.map { c in c.topics.prefix(2).map { c.theme(for: $0, mode: .drill, language: language) } } ?? [])
+            for level in GuidanceLevel.allCases {
+                XCTAssertFalse(voice(level, language: language).contains("phrase is \(language.greeting)"), "\(language.id) \(level)")
+                for theme in themes {
+                    let openers = TeachingPolicy.openingAngles.indices.map {
+                        TeachingPolicy.greeting(language: language, level: level, meaningLanguage: meaning, theme: theme, angle: $0)
+                    }
+                    XCTAssertEqual(Set(openers).count, TeachingPolicy.openingAngles.count, "\(language.id) \(theme.id)")
+                    for opener in openers {
+                        XCTAssertTrue(opener.contains(theme.situation), "\(language.id) \(theme.id)")
+                        XCTAssertFalse(opener.contains("teach ‘\(language.greeting)’"), "\(language.id) \(theme.id)")
+                        XCTAssertFalse(opener.contains(other), "\(language.id) \(theme.id)")
+                    }
+                }
+                let free = TeachingPolicy.greeting(language: language, level: level, meaningLanguage: meaning)
+                XCTAssertTrue(free.contains("No situation is chosen"), language.id)
+            }
         }
     }
 
