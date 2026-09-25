@@ -183,6 +183,26 @@ final class MuralUITests: XCTestCase {
         XCTAssertTrue(app.buttons["start-conversation"].exists)
     }
 
+    /// The voice model is a choice in Settings, starting on the original model, and the choice
+    /// explains what it trades.
+    func testSettingsOfferAVoiceModelThatDefaultsToTheOriginal() {
+        let app = launch()
+        app.buttons["Settings"].tap()
+        let picker = app.buttons["voice-model-picker"]
+        for _ in 0..<6 where !picker.isHittable { app.swipeUp() }
+        XCTAssertTrue(picker.waitForExistence(timeout: 5))
+        XCTAssertTrue(picker.label.contains("GPT-Live 1"), picker.label)
+        picker.tap()
+        app.buttons["GPT-Realtime 2.1 mini"].tap()
+        XCTAssertTrue(app.buttons["voice-model-picker"].label.contains("GPT-Realtime 2.1 mini"))
+        XCTAssertTrue(app.staticTexts["voice-model-detail"].label.contains("Experimental"))
+        let screen = XCTAttachment(screenshot: app.screenshot())
+        screen.name = "Voice model choice"; screen.lifetime = .keepAlways; add(screen)
+        app.buttons["voice-model-picker"].tap()
+        app.buttons["GPT-Live 1"].tap()
+        XCTAssertTrue(app.buttons["voice-model-picker"].label.contains("GPT-Live 1"))
+    }
+
     func testSettingsOfferALevelAndASpeakingPace() {
         let app = launch()
         app.buttons["Settings"].tap()

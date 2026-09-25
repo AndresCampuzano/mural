@@ -481,3 +481,33 @@ no match shows the system "No Results" view; clearing it brings the list back.
   iOS 27's search bar offers no Cancel button; the test clears the field instead. The rest of
   the UI suite was not re-run.
 - Installed on the physical iPhone.
+
+## A cheaper voice, as a choice
+
+Settings now offer a voice model. `gpt-live-1` stays the default. `gpt-realtime-2.1-mini` is an
+experimental alternative, billed per token rather than per open minute: at list prices of
+$10/$20 per million audio tokens in/out (cached audio in $0.30), plus $0.003 per minute of the
+learner's speech for `gpt-4o-mini-transcribe`, a conversation minute is estimated at roughly
+$0.015–0.025 against $0.05. That range is an estimate from list prices and an assumed mix of
+speech and silence, not a measurement.
+
+The Realtime API has none of `gpt-live-1`'s session events, so `RealtimeBridge` translates both
+ways and the coordinator is unchanged: instructions become system items and a response request,
+held back while a response runs and retried if the model had started one itself; delegation is
+a function tool whose output is the helper's answer; typed replies are spoken through a response
+with its own instructions; the learner's transcript keeps the time they spoke even though it
+arrives after the reply has begun. Settings estimate each session from its recorded token cost,
+or from open time for `gpt-live-1`. New optional fields keep older backups decoding.
+
+- **123 core tests passed**, including 12 new `VoiceTests` covering the fallback, backup
+  compatibility, pricing with cached tokens, the session request, queueing, the retry on
+  `conversation_already_has_active_response`, delegation, typed replies, transcript timing,
+  muting and the closing report.
+- **All 24 native UI tests passed** on an iPhone 17 simulator (`.build/full-ui.xcresult`),
+  including a new one: the voice-model picker defaults to GPT-Live 1 and switches.
+- Built and installed on the physical iPhone.
+
+Not verified: **no conversation has been held on `gpt-realtime-2.1-mini`.** The event shapes
+were taken from the Realtime API reference, not observed, so the first real call may surface a
+field that differs. Teaching quality in Korean and Japanese, delegation, pace, and whether the
+estimate matches the OpenAI dashboard are all unknown until it is used.

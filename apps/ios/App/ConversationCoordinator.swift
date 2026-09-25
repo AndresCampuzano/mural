@@ -143,6 +143,9 @@ import MuralCore
         state = .connecting; isMuted = false
         var record = SessionRecord(languageID: language.id, themeID: selectedTheme?.id, title: selectedTheme?.title)
         if let pendingTopic { record.topics = [pendingTopic] }
+        let voiceModel = store.preferences.voiceModel
+        record.voiceModelID = voiceModel.rawValue
+        if voiceModel != .live { record.voiceCost = 0 }
         session = record; refreshTranscript(); store.save(record)
         let generation = record.id
         let learner = store.learner
@@ -154,7 +157,7 @@ import MuralCore
         connectionTask = Task { [weak self] in
             guard let self else { return }
             do {
-                try await self.transport.connect(api: self.api, instructions: instructions, history: history, speed: speed)
+                try await self.transport.connect(api: self.api, instructions: instructions, history: history, speed: speed, model: voiceModel)
                 if !self.transport.paceApplied, self.session?.id == generation {
                     let reason = self.transport.paceRejection.map { " OpenAI said: \($0)" } ?? ""
                     self.notice = "Mural is speaking at its normal speed: the voice model didn’t accept the pace setting.\(reason)"
@@ -323,6 +326,8 @@ import MuralCore
             session?.append(fragment); refreshTranscript(); lastActivity = .now; scheduleSave()
             if speaker == .assistant { scheduleTranslation(); if state == .active { checkLanguage() } }
             else if state == .active { scheduleAssessment() }
+        case "mural.voice.cost":
+            if let cost = event["cost"] as? Double, cost.isFinite, cost >= 0 { session?.voiceCost = cost; scheduleSave() }
         case "session.delegation.created":
             guard state == .active, let d = event["delegation"] as? [String: Any], d["target"] as? String == "client", let id = d["id"] as? String else { return }
             delegate(id: id)
