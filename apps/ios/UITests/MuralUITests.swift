@@ -430,6 +430,26 @@ final class MuralUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Past conversations"].exists)
     }
 
+    /// The kept phrases can be searched like the words: a search with no match says so, and
+    /// clearing it brings the list back.
+    func testKeptPhrasesCanBeSearched() {
+        let app = launch(ended: true)
+        let chip = app.buttons.matching(identifier: "phrase-chip").firstMatch
+        XCTAssertTrue(chip.waitForExistence(timeout: 5))
+        chip.tap()
+        app.tabBars.buttons["Phrases"].tap()
+        XCTAssertTrue(app.staticTexts["saved-phrase-text"].waitForExistence(timeout: 5))
+        let field = app.searchFields["Find a phrase"]
+        if !field.exists { app.swipeDown() }
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.tap()
+        field.typeText("zzz")
+        XCTAssertTrue(app.staticTexts["No Results for “zzz”"].waitForExistence(timeout: 5) || app.otherElements["saved-phrases-no-match"].exists)
+        XCTAssertFalse(app.staticTexts["saved-phrase-text"].exists)
+        field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 3))
+        XCTAssertTrue(app.staticTexts["saved-phrase-text"].waitForExistence(timeout: 5))
+    }
+
     func testJapanesePhrasesAreOfferedFromAJapaneseConversation() {
         let app = XCUIApplication()
         app.launchArguments = ["--preview", "--ended-conversation", "--preview-language=ja"]

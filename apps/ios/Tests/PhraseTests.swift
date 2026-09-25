@@ -112,4 +112,17 @@ final class PhraseTests: XCTestCase {
         XCTAssertEqual(learner.observationCount, 0)
         XCTAssertEqual(learner.challenge, 0)
     }
+
+    func testASearchFindsAPhraseByItsTextOrMeaningAndIgnoresSpacing() {
+        for language in LanguageRegistry.all {
+            let phrase = SavedPhrase(languageID: language.id, text: "\(language.greetingWord) \(language.greetingWord)", meaning: "Hello there", meaningLanguage: "English")
+            XCTAssertTrue(phrase.matches(""), language.id)
+            XCTAssertTrue(phrase.matches("  "), language.id)
+            XCTAssertTrue(phrase.matches(language.greetingWord), language.id)
+            XCTAssertTrue(phrase.matches(language.greetingWord + language.greetingWord), language.id)
+            XCTAssertTrue(phrase.matches("hello"), language.id)
+            XCTAssertTrue(phrase.matches(" THERE "), language.id)
+            XCTAssertFalse(phrase.matches("goodbye"), language.id)
+        }
+    }
 }
