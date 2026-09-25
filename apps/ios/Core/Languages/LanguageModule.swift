@@ -27,6 +27,8 @@ public struct LanguageModule: Identifiable, Sendable {
     /// script as the learner reads — Latin beside English, say — cannot be separated this way
     /// and needs a different strategy before it is registered.
     public var scriptRanges: [ClosedRange<UInt32>] = []
+    /// A textbook syllabus to practise by unit. `nil` hides the course entirely.
+    public var course: Course? = nil
 
     public var themes: [ConversationTheme] {
         ConversationTheme.shared.map { themeOverrides[$0.id] ?? $0 }

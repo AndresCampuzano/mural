@@ -26,6 +26,7 @@ extension LanguageModule {
             "traditions": .init("traditions", "일상 속 문화", "Small customs, big stories", "flag", "Local life", "Talk about everyday customs, holidays and family routines in Korean. Compare the learner's experience without treating any culture as uniform.", 2)
         ],
         // Hangul syllables and jamo, including the compatibility and extended blocks.
-        scriptRanges: [0x1100...0x11FF, 0x3130...0x318F, 0xA960...0xA97F, 0xAC00...0xD7A3, 0xD7B0...0xD7FF]
+        scriptRanges: [0x1100...0x11FF, 0x3130...0x318F, 0xA960...0xA97F, 0xAC00...0xD7A3, 0xD7B0...0xD7FF],
+        course: .seoulNationalKorean1
     )
 }

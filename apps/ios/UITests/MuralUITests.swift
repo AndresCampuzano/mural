@@ -310,6 +310,39 @@ final class MuralUITests: XCTestCase {
         XCTAssertEqual(app.staticTexts["meaning-caption"].label, "¡Hola!")
     }
 
+    /// The course follows the module: Korean offers one, Japanese does not, and a topic starts
+    /// from its unit with the chosen practice mode.
+    func testCourseUnitStartsAPracticeAndOnlyAppearsForAModuleWithACourse() {
+        let app = launch()
+        app.tabBars.buttons["Themes"].tap()
+        let card = app.buttons["course-card"]
+        XCTAssertTrue(card.waitForExistence(timeout: 5))
+        card.tap()
+        let unit = app.buttons["course-unit-6"]
+        XCTAssertTrue(unit.waitForExistence(timeout: 5))
+        for _ in 0..<6 where !unit.isHittable { app.swipeUp() }
+        unit.tap()
+        XCTAssertTrue(app.staticTexts["얼마예요?"].waitForExistence(timeout: 5))
+        let screen = XCTAttachment(screenshot: app.screenshot())
+        screen.name = "Course unit 6"; screen.lifetime = .keepAlways; add(screen)
+        let drill = app.buttons["course-restaurant-drill"]
+        for _ in 0..<6 where !drill.isHittable { app.swipeUp() }
+        drill.tap()
+        XCTAssertTrue(app.staticTexts["Ordering a meal"].waitForExistence(timeout: 5))
+        app.buttons["Settings"].tap()
+        app.buttons["learning-language-picker"].tap()
+        app.buttons["Japanese · Standard Japanese"].tap()
+        app.buttons["Done"].tap()
+        app.tabBars.buttons["Themes"].tap()
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "コーヒーでも")).firstMatch.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["course-card"].exists)
+        app.tabBars.buttons["Talk"].tap()
+        app.buttons["Settings"].tap()
+        app.buttons["learning-language-picker"].tap()
+        app.buttons["Korean · Seoul standard"].tap()
+        app.buttons["Done"].tap()
+    }
+
     func testLanguageSwitchUpdatesGreetingThemesAndWords() {
         let app = launch()
         app.tabBars.buttons["Themes"].tap()

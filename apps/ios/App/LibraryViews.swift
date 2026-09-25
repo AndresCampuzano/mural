@@ -21,6 +21,9 @@ struct ThemesView: View {
                     HStack { Image(systemName: "waveform"); Text("Just talk"); Spacer(); Image(systemName: "arrow.up.right") }
                         .font(.headline).padding(22).background(.white.opacity(0.8), in: RoundedRectangle(cornerRadius: 26))
                 }
+                if let course = coordinator.language.course {
+                    CourseCard(course: course, language: coordinator.language) { choose($0) }
+                }
                 ScrollView(.horizontal) {
                     HStack(spacing: 8) {
                         ForEach(categories, id: \.self) { c in

@@ -425,3 +425,45 @@ Not verified: the stacked rows have only been seen against the seeded preview li
 one phrase. How a real conversation's six candidates look on a small phone, and whether the
 smaller orb still reads as the thing you are talking to, have not been checked beyond a hands-on
 pass on a physical iPhone.
+
+## Practising by textbook unit
+
+A module can now carry a `Course`: units as sections, and topics that each list the units they
+draw on, so one topic appears under several units. Korean carries units 1–16 of Seoul National
+University Korean 1A–1B, taken from the scope-and-sequence tables of the 1A student book and the
+1B workbook (unit titles, vocabulary areas, grammar). The situations and topic words are Mural's
+own; no dialogue or exercise from the books is reproduced. Japanese has no course and its Themes
+tab is unchanged. Each topic runs as a role-play or as quick questions aimed at its grammar; each
+unit also offers a drill over all of its grammar. A course topic becomes an ordinary
+`ConversationTheme`, so `LearningEngine` never sees the course and practice earns recall bars
+exactly as any conversation does.
+
+- **109 core tests passed**, including seven new `CourseTests` that loop over every module with
+  a course: every unit has a topic, every topic's units exist, a shared topic is listed under
+  each of its units, both modes' prompts carry each target pattern and never another module's
+  name, and "earlier grammar" reaches only backwards.
+- **2 native UI tests passed** on an iPhone 17 simulator (`.build/course-ui.xcresult`): the new
+  course test and the existing Themes/language-switch test. The full UI suite was not re-run.
+  The new test caught a real bug: after switching language, the Themes tab stayed on the Korean
+  unit screen. The tab's navigation now resets when the language changes.
+- Built and installed on a physical iPhone 15 Pro Max. No live conversation was held on it.
+
+Not verified: whether the model actually steers learners into the target grammar, and whether
+the drills feel like practice rather than a quiz. The 1B student book was not scanned (only the
+workbook), and the 1A text came from OCR of a phone scan, so the unit tables were read by eye
+against it.
+
+## A different opening each time
+
+Every conversation used to open the same way: at the starting-out level Mural always taught the
+greeting first, because both the session prompt's opening rule and the spoken opener named it,
+and neither knew the chosen theme. The opener now carries the chosen theme's situation (or, with
+no theme, asks Mural to pick and vary an everyday subject), and the app picks one of six opening
+angles at random for each session. The greeting is offered as an example rather than a script,
+and a greeting lesson is only asked for when the situation is about meeting someone.
+
+- **110 core tests passed**, including a new one that loops over every module, every level and
+  several themes and course topics: the opener contains the theme's situation, each angle gives a
+  distinct prompt, no opener tells Mural to teach the greeting, and none names another module.
+- Built and installed on the physical iPhone. Not verified: that the live model actually varies
+  its first line in practice; that needs a few real conversations.
