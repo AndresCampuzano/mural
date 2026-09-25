@@ -23,6 +23,8 @@ struct RootView: View {
             Tab("Talk", systemImage: "waveform", value: 0) { shell { TalkView(coordinator: coordinator) { tab = 3 } } }
             Tab("Themes", systemImage: "square.grid.2x2", value: 1) {
                 shell { ThemesView(coordinator: coordinator) { theme in coordinator.chooseTheme(theme); tab = 0 } }
+                    // A course screen belongs to one language, so a switch starts the tab from the top.
+                    .id(coordinator.language.id)
             }
             Tab("Words", systemImage: "book", value: 2) { shell { WordsView(coordinator: coordinator) } }
             Tab("Phrases", systemImage: "bookmark", value: 3) { shell { PhrasesView(coordinator: coordinator) } }
