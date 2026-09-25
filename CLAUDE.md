@@ -203,6 +203,10 @@ macrons. Say so rather than overselling it.
   running `scripts/generate_project.py` fails the build with "Build input file cannot be found".
 - **Xcode 27 ships no `Simulator.app`.** Use `DeviceHub.app` under
   `/Applications/Xcode.app/Contents/Applications/`, or drive the simulator with `xcrun simctl`.
+- **An unsigned simulator build cannot save the API key.** `CODE_SIGNING_ALLOWED=NO`, as in the
+  commands above, is right for CI but leaves the app without the entitlement the Keychain needs,
+  so **Save key** fails with "The key couldn't be saved to this device's Keychain". For hands-on
+  testing in the simulator, drop that flag so Xcode signs the app to run locally.
 
 ## Installing on a physical iPhone
 
