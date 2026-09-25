@@ -15,6 +15,15 @@ public struct SavedPhrase: Codable, Identifiable, Equatable, Sendable {
     /// The line it was taken from, kept so the phrase can be read in context later.
     public var source: String
     public var savedAt = Date()
+    /// Whether a search finds this phrase, by its text or its meaning. An empty search finds
+    /// everything, and spacing is ignored so a phrase is found however its words are spaced.
+    public func matches(_ search: String) -> Bool {
+        let query = search.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return true }
+        let unspaced = { (value: String) in value.filter { !$0.isWhitespace } }
+        return text.localizedCaseInsensitiveContains(query) || meaning.localizedCaseInsensitiveContains(query)
+            || unspaced(text).localizedCaseInsensitiveContains(unspaced(query))
+    }
     public init(languageID: String, text: String, meaning: String = "", meaningLanguage: String, source: String = "") {
         self.languageID = languageID
         self.text = String(text.prefix(SavedPhrase.maximumLength))

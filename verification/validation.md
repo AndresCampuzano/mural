@@ -467,3 +467,17 @@ and a greeting lesson is only asked for when the situation is about meeting some
   distinct prompt, no opener tells Mural to teach the greeting, and none names another module.
 - Built and installed on the physical iPhone. Not verified: that the live model actually varies
   its first line in practice; that needs a few real conversations.
+
+## Searching the kept phrases
+
+The Phrases tab has the same search field as Words. `SavedPhrase.matches` finds a phrase by its
+text or its meaning, case-insensitively, and ignores spacing so a phrase is found however its
+words are spaced — useful for Hangul, where learners often type without 띄어쓰기. A search with
+no match shows the system "No Results" view; clearing it brings the list back.
+
+- **111 core tests passed**, including a new one looping over every module.
+- **1 new native UI test passed** on an iPhone 17 simulator: keep a phrase, search for something
+  absent, see no results, clear, and the phrase returns. The first attempt failed only because
+  iOS 27's search bar offers no Cancel button; the test clears the field instead. The rest of
+  the UI suite was not re-run.
+- Installed on the physical iPhone.

@@ -73,7 +73,9 @@ struct PhraseChips: View {
 struct PhrasesView: View {
     let coordinator: ConversationCoordinator
     @State private var deleting: SavedPhrase?
+    @State private var search = ""
     private var phrases: [SavedPhrase] { coordinator.store.savedPhrases }
+    private var found: [SavedPhrase] { phrases.filter { $0.matches(search) } }
 
     var body: some View {
         Group {
@@ -113,12 +115,16 @@ struct PhrasesView: View {
         VStack(alignment: .leading, spacing: 0) {
             heading.padding(.horizontal, 26).padding(.top, 20).padding(.bottom, 14)
             phraseList
-        }
+        }.searchable(text: $search, prompt: "Find a phrase")
     }
 
     private var phraseList: some View {
         List {
-            ForEach(phrases) { phrase in
+            if found.isEmpty {
+                ContentUnavailableView.search(text: search).listRowBackground(MuralColor.cream)
+                    .accessibilityIdentifier("saved-phrases-no-match")
+            }
+            ForEach(found) { phrase in
                 VStack(alignment: .leading, spacing: 6) {
                     Text(phrase.text).font(.system(.title3, design: .rounded, weight: .medium))
                         .textSelection(.enabled).accessibilityIdentifier("saved-phrase-text")
