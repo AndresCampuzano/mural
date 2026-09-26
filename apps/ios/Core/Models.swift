@@ -125,11 +125,12 @@ public struct SessionRecord: Codable, Identifiable, Sendable {
     public var outputTokens = 0
     public var searchCalls = 0
     public var endReason: String?
-    /// The voice model this session used. Optional so a backup written before the choice existed
-    /// still decodes; absent means gpt-live-1, the only model there was.
+    /// The voice model this session used, recorded while Mural offered a second, token-billed
+    /// voice (gpt-realtime-2.1-mini, since removed). Optional so older backups decode; absent
+    /// means gpt-live-1. Kept so those sessions stay correctly labelled and priced in Spending.
     public var voiceModelID: String?
-    /// Estimated voice cost in US dollars for a token-billed model. Absent for gpt-live-1, whose
-    /// cost follows from `voiceSeconds`.
+    /// The recorded voice cost in US dollars of a session on that token-billed voice. Absent for
+    /// gpt-live-1, whose cost follows from `voiceSeconds`.
     public var voiceCost: Double?
     public init(languageID: String = LanguageRegistry.defaultID, themeID: String? = nil, title: String? = nil) {
         self.languageID = languageID; self.themeID = themeID
@@ -171,12 +172,7 @@ public struct Preferences: Codable, Sendable {
     public var guidanceLevelID: String?
     /// Optional so an unset pace can follow the level. Stored as the provider's own multiplier.
     public var speechSpeed: Double?
-    /// Optional so a backup written before the choice existed still decodes.
-    public var voiceModelID: String?
     public init() {}
-    /// An absent or unrecognised model falls back to gpt-live-1, which is how Mural behaved
-    /// before the choice existed.
-    public var voiceModel: VoiceModel { voiceModelID.flatMap(VoiceModel.init(rawValue:)) ?? .live }
     /// An absent or unrecognised identifier falls back rather than rejecting the backup: the
     /// level is presentation and prompt policy, never stored learning evidence. The fallback is
     /// target-language-only, which is how Mural behaved before this setting existed.

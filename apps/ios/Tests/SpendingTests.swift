@@ -64,14 +64,14 @@ final class SpendingTests: XCTestCase {
     func testTheEstimateSplitsVoiceByTheModelEachSessionUsedAndAddsText() {
         var live = SessionRecord(languageID: "ko"); live.startedAt = date(2026, 9, 4); live.voiceSeconds = 600
         var mini = SessionRecord(languageID: "ja"); mini.startedAt = date(2026, 9, 5)
-        mini.voiceModelID = VoiceModel.realtimeMini.rawValue; mini.voiceCost = 0.12
+        mini.voiceModelID = "gpt-realtime-2.1-mini"; mini.voiceCost = 0.12
         mini.inputTokens = 1_000_000; mini.outputTokens = 1_000_000
         var old = SessionRecord(languageID: "ko"); old.startedAt = date(2026, 7, 1); old.voiceSeconds = 60
         let report = SpendReport.estimated(sessions: [live, mini, old], calendar: calendar)
         let september = calendar.dateInterval(of: .month, for: date(2026, 9, 15))!.start
         let rows = report.rows(in: september)
-        XCTAssertEqual(rows.first { $0.model == VoiceModel.live.rawValue }?.amount ?? 0, 0.50, accuracy: 1e-9)
-        XCTAssertEqual(rows.first { $0.model == VoiceModel.realtimeMini.rawValue }?.amount ?? 0, 0.12, accuracy: 1e-9)
+        XCTAssertEqual(rows.first { $0.model == VoicePricing.liveModel }?.amount ?? 0, 0.50, accuracy: 1e-9)
+        XCTAssertEqual(rows.first { $0.model == "gpt-realtime-2.1-mini" }?.amount ?? 0, 0.12, accuracy: 1e-9)
         let text: Double = VoicePricing.textInput + VoicePricing.textOutput
         XCTAssertEqual(rows.first { $0.model == VoicePricing.textModel }?.amount ?? 0, text, accuracy: 1e-9)
         XCTAssertEqual(report.months.count, 2)

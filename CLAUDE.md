@@ -42,14 +42,12 @@ Two models: `gpt-live-1` for realtime voice over WebRTC (`LiveTransport.swift`) 
 `gpt-5.6-luna` for translation, lookup, typed replies, delegated facts and post-turn
 assessment (`APIClient.swift`).
 
-The voice model is a choice in Settings (`VoiceModel`, `Core/Voice.swift`). `gpt-live-1` is the
-default and is billed per open minute, silence included. `gpt-realtime-2.1-mini` is an
-experimental, token-billed alternative: it speaks the Realtime API, which has none of
-`gpt-live-1`'s session events, so `RealtimeBridge` (`Core/RealtimeBridge.swift`) translates both
-ways and the coordinator is unchanged. Delegation becomes a function tool, instructions become
-system items plus a `response.create` (held back while a response runs), the learner's
-transcript comes from `gpt-4o-mini-transcribe` with the time they actually spoke, and cost is
-summed from each `response.done`. A new voice-protocol feature must be added to both paths.
+`gpt-realtime-2.1-mini` was offered briefly as a cheaper, token-billed voice and removed after
+it tested worse in real conversations: it does not cancel its own echo, so it answered its own
+voice through the speaker, and even with the microphone closed during playback the learner
+judged it clearly worse. `SessionRecord.voiceModelID` and `voiceCost` remain so sessions
+recorded on it stay labelled and priced in Spending. Do not reintroduce a second voice without
+a real side-by-side conversation test.
 
 **Spending** (Settings → Spending by model, `SpendingView.swift`, `Core/Spending.swift`) shows
 monthly cost by model two ways. *Estimated here* is Mural's own figure from `SessionRecord`s.

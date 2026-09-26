@@ -68,31 +68,6 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         }
         return names
     }
-    /// Opens a Realtime call: the SDP offer and the session travel as multipart form fields, and
-    /// the SDP answer comes back as the body. Sent through the same redirect-blocking session as
-    /// every other request, so the Authorization header only ever reaches api.openai.com.
-    func realtimeCall(sdp: String, session: [String: Any]) async throws -> String {
-        guard let key = CredentialStore.read() else { throw APIError.missingKey }
-        let boundary = "mural-" + UUID().uuidString
-        var body = Data()
-        func field(_ name: String, _ type: String, _ value: Data) {
-            body.append(Data("--\(boundary)\r\nContent-Disposition: form-data; name=\"\(name)\"\r\nContent-Type: \(type)\r\n\r\n".utf8))
-            body.append(value); body.append(Data("\r\n".utf8))
-        }
-        field("sdp", "application/sdp", Data(sdp.utf8))
-        field("session", "application/json", try JSONSerialization.data(withJSONObject: session))
-        body.append(Data("--\(boundary)--\r\n".utf8))
-        var request = URLRequest(url: URL(string: "https://api.openai.com/v1/realtime/calls")!)
-        request.httpMethod = "POST"; request.setValue("Bearer " + key, forHTTPHeaderField: "Authorization")
-        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
-        request.httpBody = body
-        let (data, response) = try await self.session.data(for: request)
-        try Task.checkCancellation()
-        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
-        guard (200..<300).contains(http.statusCode) else { throw APIError.http(http.statusCode, Self.providerMessage(data)) }
-        guard let answer = String(data: data, encoding: .utf8), answer.hasPrefix("v=") else { throw APIError.invalidResponse }
-        return answer
-    }
     func respond(instructions: String, input: String, schema: [String: Any]? = nil, search: Bool = false) async throws -> APIResult {
         var body: [String: Any] = ["model": "gpt-5.6-luna", "store": false, "instructions": instructions,
                                   "input": [["role": "user", "content": input]], "max_output_tokens": schema == nil ? 1400 : 2200,

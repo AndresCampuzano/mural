@@ -94,9 +94,8 @@ public struct SpendReport: Sendable, Equatable {
         var totals: [Date: [String: Double]] = [:]
         for session in sessions {
             guard let month = calendar.dateInterval(of: .month, for: session.startedAt)?.start else { continue }
-            let voice = session.voiceModelID.flatMap(VoiceModel.init(rawValue:)) ?? .live
             let voiceCost = session.estimatedVoiceCost
-            if voiceCost > 0 { totals[month, default: [:]][voice.rawValue, default: 0] += voiceCost }
+            if voiceCost > 0 { totals[month, default: [:]][session.voiceModel, default: 0] += voiceCost }
             let textIn: Double = Double(max(0, session.inputTokens)) * VoicePricing.textInput
             let textOut: Double = Double(max(0, session.outputTokens)) * VoicePricing.textOutput
             let text: Double = (textIn + textOut) / 1_000_000

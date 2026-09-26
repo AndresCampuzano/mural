@@ -183,26 +183,6 @@ final class MuralUITests: XCTestCase {
         XCTAssertTrue(app.buttons["start-conversation"].exists)
     }
 
-    /// The voice model is a choice in Settings, starting on the original model, and the choice
-    /// explains what it trades.
-    func testSettingsOfferAVoiceModelThatDefaultsToTheOriginal() {
-        let app = launch()
-        app.buttons["Settings"].tap()
-        let picker = app.buttons["voice-model-picker"]
-        for _ in 0..<6 where !picker.isHittable { app.swipeUp() }
-        XCTAssertTrue(picker.waitForExistence(timeout: 5))
-        XCTAssertTrue(picker.label.contains("GPT-Live 1"), picker.label)
-        picker.tap()
-        app.buttons["GPT-Realtime 2.1 mini"].tap()
-        XCTAssertTrue(app.buttons["voice-model-picker"].label.contains("GPT-Realtime 2.1 mini"))
-        XCTAssertTrue(app.staticTexts["voice-model-detail"].label.contains("Experimental"))
-        let screen = XCTAttachment(screenshot: app.screenshot())
-        screen.name = "Voice model choice"; screen.lifetime = .keepAlways; add(screen)
-        app.buttons["voice-model-picker"].tap()
-        app.buttons["GPT-Live 1"].tap()
-        XCTAssertTrue(app.buttons["voice-model-picker"].label.contains("GPT-Live 1"))
-    }
-
     /// Spending opens from Settings on Mural's own estimate when no Admin key is saved, asks for
     /// one to show the real bill, and refuses a project key in its place.
     func testSpendingShowsTheEstimateAndAsksForAnAdminKeyForTheBill() {
@@ -217,10 +197,17 @@ final class MuralUITests: XCTestCase {
         XCTAssertNotEqual(app.staticTexts["spending-this-month"].label, "$0.00")
         var screen = XCTAttachment(screenshot: app.screenshot())
         screen.name = "Spending estimate"; screen.lifetime = .keepAlways; add(screen)
-        app.buttons["Billed by OpenAI"].tap()
+        // A synthesized tap on a segment just after the screen is pushed is occasionally dropped
+        // (the element tree then shows the other segment still selected), so the switch is
+        // confirmed rather than assumed.
+        let billed = app.segmentedControls["spending-source"].buttons["Billed by OpenAI"]
+        for _ in 0..<3 where !billed.isSelected {
+            billed.tap()
+            _ = XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "isSelected == true"), object: billed)], timeout: 2)
+        }
+        XCTAssertTrue(billed.isSelected)
         let card = app.descendants(matching: .any)["spending-admin-card"]
-        if !card.waitForExistence(timeout: 10) { print(app.debugDescription) }
-        XCTAssertTrue(card.exists)
+        XCTAssertTrue(card.waitForExistence(timeout: 10))
         let field = app.secureTextFields["admin-key"]
         for _ in 0..<4 where !field.isHittable { app.swipeUp() }
         field.tap()
