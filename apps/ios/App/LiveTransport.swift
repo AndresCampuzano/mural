@@ -27,6 +27,10 @@ enum ConnectionState: Equatable { case idle, connecting, active, closing, ended,
     /// Present while a token-billed voice model carries the call, translating its events into the
     /// session protocol the app speaks. Absent for gpt-live-1, which speaks that protocol itself.
     private var bridge: RealtimeBridge?
+    /// True while the microphone is held closed because the model's own audio is playing.
+    private var echoGuarded = false
+    private var echoTask: Task<Void, Never>?
+    private var outputQuietSince: Date?
 
     /// `speed` is the provider's playback multiple for generated speech. It is clamped to the
     /// documented 0.25–1.5 range and can only be set between turns, so Mural sends it once here.
@@ -145,7 +149,10 @@ enum ConnectionState: Equatable { case idle, connecting, active, closing, ended,
     }
 
     @discardableResult func send(_ event: [String: Any]) -> Bool {
-        guard bridge != nil else { return sendRaw(event) }
+        guard bridge != nil else {
+            var event = event; event.removeValue(forKey: RealtimeBridge.respondKey)
+            return sendRaw(event)
+        }
         guard let channel, channel.readyState == .open else { return false }
         // A command the bridge holds back until the current response ends is still accepted.
         return bridge!.outbound(event).allSatisfy { sendRaw($0) }
@@ -155,7 +162,7 @@ enum ConnectionState: Equatable { case idle, connecting, active, closing, ended,
         return channel.sendData(RTCDataBuffer(data: data, isBinary: false))
     }
     func mute(_ muted: Bool) {
-        isMuted = muted; localTrack?.isEnabled = !muted
+        isMuted = muted; localTrack?.isEnabled = !muted && !echoGuarded
         _ = send(["type": muted ? "session.input_audio.mute" : "session.input_audio.unmute", "event_id": UUID().uuidString])
     }
     func close() {
@@ -170,6 +177,7 @@ enum ConnectionState: Equatable { case idle, connecting, active, closing, ended,
     }
     func disconnect() {
         attempt = UUID(); meterTask?.cancel(); meterTask = nil
+        echoTask?.cancel(); echoTask = nil; echoGuarded = false; outputQuietSince = nil
         started = false; closing = true
         localTrack?.isEnabled = false; localTrack = nil
         channel?.delegate = nil; channel?.close(); channel = nil
@@ -181,6 +189,40 @@ enum ConnectionState: Equatable { case idle, connecting, active, closing, ended,
         }
         lastInput = 0; lastOutput = 0; reportedMuted = false; onLevels?(0, 0)
         bridge = nil
+    }
+    /// Holds the microphone closed while a token-billed voice plays its own audio, which it would
+    /// otherwise hear through the speaker and answer as if the learner had spoken. It reopens a
+    /// moment after playback stops, so the room's echo has died away, and never stays closed
+    /// longer than a single reply could last.
+    private func guardEcho(_ closed: Bool) {
+        echoTask?.cancel()
+        if closed {
+            echoGuarded = true; localTrack?.isEnabled = false
+            echoTask = Task { [weak self] in
+                try? await Task.sleep(for: .seconds(45))
+                guard !Task.isCancelled else { return }
+                self?.guardEcho(false)
+            }
+        } else {
+            echoTask = Task { [weak self] in
+                try? await Task.sleep(for: .milliseconds(400))
+                guard !Task.isCancelled, let self, self.echoGuarded else { return }
+                self.echoGuarded = false
+                _ = self.sendRaw(["type": "input_audio_buffer.clear", "event_id": UUID().uuidString])
+                self.localTrack?.isEnabled = !self.isMuted && !self.closing
+            }
+        }
+    }
+    /// A backstop for the playback events, which can arrive late: audio heard from the model
+    /// closes the microphone, and 0.8 seconds of silence from it reopens it.
+    private func followPlayback(_ level: Double) {
+        if level > 0.02 {
+            outputQuietSince = nil
+            if !echoGuarded { guardEcho(true) }
+        } else if echoGuarded {
+            let quiet = outputQuietSince ?? .now; outputQuietSince = quiet
+            if Date().timeIntervalSince(quiet) >= 0.8 { outputQuietSince = nil; guardEcho(false) }
+        }
     }
     private func startMetering() {
         meterTask?.cancel()
@@ -204,6 +246,7 @@ enum ConnectionState: Equatable { case idle, connecting, active, closing, ended,
                         let settled = abs(nextInput - self.lastInput) < 0.004 && abs(nextOutput - self.lastOutput) < 0.004
                             && self.isMuted == self.reportedMuted
                         self.lastInput = nextInput; self.lastOutput = nextOutput
+                        if self.bridge != nil { self.followPlayback(output) }
                         guard !settled else { return }
                         self.reportedMuted = self.isMuted
                         self.onLevels?(self.isMuted ? 0 : self.lastInput, self.lastOutput)
@@ -243,6 +286,7 @@ extension LiveTransport: RTCDataChannelDelegate, RTCPeerConnectionDelegate {
                 self.onEvent?(json); return
             }
             let (emit, send) = self.bridge!.inbound(json)
+            if let microphone = self.bridge!.microphone { self.bridge!.microphone = nil; self.guardEcho(microphone == .close) }
             send.forEach { _ = self.sendRaw($0) }
             for event in emit {
                 if event["type"] as? String == "session.started" { self.started = true }

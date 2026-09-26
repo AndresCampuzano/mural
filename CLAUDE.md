@@ -51,6 +51,14 @@ system items plus a `response.create` (held back while a response runs), the lea
 transcript comes from `gpt-4o-mini-transcribe` with the time they actually spoke, and cost is
 summed from each `response.done`. A new voice-protocol feature must be added to both paths.
 
+Two rules keep the token-billed voice from talking to itself. **It hears its own voice**:
+unlike `gpt-live-1` it does not cancel its echo, so the microphone is closed while its audio
+plays (`output_audio_buffer.started`/`stopped`, backed by the measured playback level) and the
+input buffer is cleared as it reopens. The price is no barge-in on that model. **An instruction
+only asks for a reply when marked `respond: true`** (greeting, help, theme change, topic
+invite); redirects and level changes shape the next turn. Unmarked instructions that forced a
+reply would let a drifted reply trigger a redirect that triggers another reply, without end.
+
 **Spending** (Settings → Spending by model, `SpendingView.swift`, `Core/Spending.swift`) shows
 monthly cost by model two ways. *Estimated here* is Mural's own figure from `SessionRecord`s.
 *Billed by OpenAI* reads the organization Costs API, which only accepts an **Admin key**

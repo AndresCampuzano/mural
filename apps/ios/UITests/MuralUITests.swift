@@ -217,10 +217,17 @@ final class MuralUITests: XCTestCase {
         XCTAssertNotEqual(app.staticTexts["spending-this-month"].label, "$0.00")
         var screen = XCTAttachment(screenshot: app.screenshot())
         screen.name = "Spending estimate"; screen.lifetime = .keepAlways; add(screen)
-        app.buttons["Billed by OpenAI"].tap()
+        // A synthesized tap on a segment just after the screen is pushed is occasionally dropped
+        // (the element tree then shows the other segment still selected), so the switch is
+        // confirmed rather than assumed.
+        let billed = app.segmentedControls["spending-source"].buttons["Billed by OpenAI"]
+        for _ in 0..<3 where !billed.isSelected {
+            billed.tap()
+            _ = XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: NSPredicate(format: "isSelected == true"), object: billed)], timeout: 2)
+        }
+        XCTAssertTrue(billed.isSelected)
         let card = app.descendants(matching: .any)["spending-admin-card"]
-        if !card.waitForExistence(timeout: 10) { print(app.debugDescription) }
-        XCTAssertTrue(card.exists)
+        XCTAssertTrue(card.waitForExistence(timeout: 10))
         let field = app.secureTextFields["admin-key"]
         for _ in 0..<4 where !field.isHittable { app.swipeUp() }
         field.tap()

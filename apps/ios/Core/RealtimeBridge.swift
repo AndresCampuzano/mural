@@ -15,6 +15,14 @@ public struct RealtimeBridge {
     /// Responses call and returns the reply as the function's output.
     public static let helperTool = "ask_mural_helper"
     public static let activeResponseError = "conversation_already_has_active_response"
+    /// Set on an app command that should make the model speak now. Removed before anything
+    /// reaches gpt-live-1, which has no such field.
+    public static let respondKey = "mural_respond"
+
+    /// What the transport should do with the microphone. A token-billed voice does not cancel
+    /// its own echo, so it hears itself through the speaker, takes that for the learner and
+    /// answers itself without end; the microphone is closed while its audio plays.
+    public enum Microphone: Equatable { case close, open }
 
     public let startedAt: Date
     public private(set) var cost = 0.0
@@ -23,6 +31,8 @@ public struct RealtimeBridge {
     private var sentResponses: [String: [String: Any]] = [:]
     private var speechStarted: [String: Date] = [:]
     private var speechStopped: [String: Date] = [:]
+    /// The latest microphone change, read and cleared by the transport after each event.
+    public var microphone: Microphone?
 
     public init(startedAt: Date) { self.startedAt = startedAt }
 
@@ -59,6 +69,9 @@ public struct RealtimeBridge {
         let content = event["content"] as? String ?? ""
         switch type {
         case "session.instructions.append":
+            // Guidance for the next turn is only added; asking for a reply to every instruction
+            // would make the model speak each time the app adjusts it.
+            guard event[Self.respondKey] as? Bool == true else { return [Self.systemItem(content, id: id)] }
             return [Self.systemItem(content, id: id)] + request(["type": "response.create", "event_id": id + "-response"])
         case "session.thinking.append":
             return [Self.systemItem(content, id: id)]
@@ -85,6 +98,13 @@ public struct RealtimeBridge {
     public mutating func inbound(_ event: [String: Any], now: Date = .now) -> (emit: [[String: Any]], send: [[String: Any]]) {
         guard let type = event["type"] as? String else { return ([], []) }
         switch type {
+        case "output_audio_buffer.started":
+            microphone = .close
+            return ([], [])
+        case "output_audio_buffer.stopped", "output_audio_buffer.cleared":
+            microphone = .open
+            // Anything captured as playback ended is the tail of the model's own voice.
+            return ([], [["type": "input_audio_buffer.clear", "event_id": UUID().uuidString]])
         case "session.created":
             let id = (event["session"] as? [String: Any])?["id"] as? String
             return ([["type": "session.started", "session": ["id": id as Any]]], [])
@@ -131,7 +151,8 @@ public struct RealtimeBridge {
             // A response asked for while the model had already started one on its own is not a
             // failure: it waits for that one to finish.
             if details["code"] as? String == Self.activeResponseError, let client, let body = sentResponses[client] {
-                queued.insert(body, at: 0); responseActive = true
+                if queued.isEmpty { queued = [body] }
+                responseActive = true
                 return ([], [])
             }
             return ([["type": "error", "error": ["client_event_id": client as Any, "message": details["message"] as Any]]], [])
@@ -147,7 +168,9 @@ public struct RealtimeBridge {
 
     private mutating func request(_ body: [String: Any]) -> [[String: Any]] {
         if let id = body["event_id"] as? String { sentResponses[id] = body }
-        guard !responseActive else { queued.append(body); return [] }
+        // One waiting reply at most: a newer request replaces an older one, so requests can never
+        // pile up into a run of replies nobody asked for.
+        guard !responseActive else { queued = [body]; return [] }
         responseActive = true
         return [body]
     }

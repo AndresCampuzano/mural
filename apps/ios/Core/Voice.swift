@@ -18,7 +18,7 @@ public enum VoiceModel: String, CaseIterable, Codable, Sendable, Identifiable {
     public var detail: String {
         switch self {
         case .live: "The original voice. Billed for every minute a conversation is open."
-        case .realtimeMini: "Experimental and usually cheaper: billed only for speech, not pauses. A smaller model, so teaching may be less careful."
+        case .realtimeMini: "Experimental and usually cheaper: billed only for speech, not pauses. A smaller model, so teaching may be less careful, and Mural cannot be interrupted mid-sentence: the microphone rests while it speaks so it does not hear itself."
         }
     }
     /// Transcripts of the learner's speech come from a separate model on the token-billed voice.

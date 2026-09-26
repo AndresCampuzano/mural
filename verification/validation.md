@@ -542,3 +542,37 @@ Not verified: **the billed view has never received a real Costs API response.** 
 shape and line-item format come from OpenAI's reference and cookbook; repeating `group_by` for
 two fields, the exact line-item names for `gpt-live-1` and the Realtime models, and how far the
 data lags are all unobserved.
+
+## The cheaper voice talked to itself
+
+On `gpt-realtime-2.1-mini` the voice broke down into Mural talking over itself. The two mini
+sessions saved in the simulator showed why: of eleven "learner" lines in 36 seconds, every one
+was the opening words of Mural's own reply ("Nice.", "Nice indeed.", "That's a good habit.")
+heard back through the microphone about a second after it began. Voice detection took that for
+the learner, interrupted the reply and answered it, and the loop ran until the session was
+closed. The same simulator ran a 13-minute `gpt-live-1` session without it, because that model
+handles its own echo and the Realtime API does not. The two sessions cost $0.024 for 21 seconds
+and $0.056 for 39 seconds, more per minute than `gpt-live-1`, because the loop kept generating.
+It could also have recorded Mural's Korean as the learner's own production.
+
+- The microphone now closes while the model's audio plays, on the provider's
+  `output_audio_buffer.started`/`stopped`/`cleared` events, and reopens 0.4 seconds after, with
+  the input buffer cleared. Because `stopped` is reported to arrive late at times, the measured
+  playback level also closes it and reopens it after 0.8 seconds of silence, and it never stays
+  closed longer than 45 seconds. Barge-in is lost on this model, and Settings say so.
+- Instructions no longer all ask for a reply. Only the greeting, help, a theme change and a
+  topic invite do; a language redirect or a level change is added as guidance. Otherwise a
+  reply that drifted from the target language would be redirected into another reply.
+- At most one requested reply waits while another runs; a newer request replaces it.
+
+- **132 core tests passed**, three of them new: guidance adds no reply, only the newest waiting
+  reply is kept, and the microphone closes on playback and is cleared as it reopens.
+- **24 of 25 native UI tests passed** in the full run; the Spending test failed because its tap
+  on the "Billed by OpenAI" segment was dropped (the element dump showed the sheet open and the
+  other segment still selected). The test now confirms the segment switched and taps again if
+  not, and it and the voice-model test then passed.
+- Installed on the physical iPhone and the iPhone 15 Pro Max simulator.
+
+Not verified: no conversation has been held since the fix. The simulator's Mac speakers and
+microphone are the harshest case for echo; whether the gate reopens promptly on a real iPhone,
+and whether the playback-level threshold suits its speaker, need a real conversation.

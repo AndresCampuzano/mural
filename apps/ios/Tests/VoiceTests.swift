@@ -84,7 +84,7 @@ final class VoiceTests: XCTestCase {
 
     func testAnInstructionBecomesASystemItemAndAResponse() {
         var bridge = RealtimeBridge(startedAt: start)
-        let sent = bridge.outbound(["type": "session.instructions.append", "event_id": "a", "content": "Greet."])
+        let sent = bridge.outbound(["type": "session.instructions.append", "event_id": "a", "content": "Greet.", RealtimeBridge.respondKey: true])
         XCTAssertEqual(sent.map { $0["type"] as? String }, ["conversation.item.create", "response.create"])
         XCTAssertEqual(sent[0]["event_id"] as? String, "a")
         let item = sent[0]["item"] as? [String: Any]
@@ -97,9 +97,9 @@ final class VoiceTests: XCTestCase {
 
     func testAResponseAskedForDuringAnotherWaitsForItToFinish() {
         var bridge = RealtimeBridge(startedAt: start)
-        _ = bridge.outbound(["type": "session.instructions.append", "event_id": "a", "content": "One."])
+        _ = bridge.outbound(["type": "session.instructions.append", "event_id": "a", "content": "One.", RealtimeBridge.respondKey: true])
         _ = bridge.inbound(["type": "response.created"])
-        let second = bridge.outbound(["type": "session.instructions.append", "event_id": "b", "content": "Two."])
+        let second = bridge.outbound(["type": "session.instructions.append", "event_id": "b", "content": "Two.", RealtimeBridge.respondKey: true])
         XCTAssertEqual(second.map { $0["type"] as? String }, ["conversation.item.create"])
         let done = bridge.inbound(["type": "response.done", "response": [:]], now: at(5))
         XCTAssertEqual(done.send.map { $0["event_id"] as? String }, ["b-response"])
@@ -110,7 +110,7 @@ final class VoiceTests: XCTestCase {
     /// sent at the same moment is rejected; it must be retried, not reported.
     func testAResponseRejectedBecauseTheModelStartedOneIsRetriedAfterIt() {
         var bridge = RealtimeBridge(startedAt: start)
-        _ = bridge.outbound(["type": "session.instructions.append", "event_id": "a", "content": "Help."])
+        _ = bridge.outbound(["type": "session.instructions.append", "event_id": "a", "content": "Help.", RealtimeBridge.respondKey: true])
         let rejected = bridge.inbound(["type": "error", "error": ["code": RealtimeBridge.activeResponseError, "event_id": "a-response"]])
         XCTAssertTrue(rejected.emit.isEmpty)
         let done = bridge.inbound(["type": "response.done", "response": [:]], now: at(3))
@@ -168,5 +168,46 @@ final class VoiceTests: XCTestCase {
         XCTAssertEqual(bridge.outbound(["type": "session.input_audio.mute", "event_id": "m"]).first?["type"] as? String, "input_audio_buffer.clear")
         XCTAssertTrue(bridge.outbound(["type": "session.input_audio.unmute"]).isEmpty)
         XCTAssertTrue(bridge.outbound(["type": "session.close"]).isEmpty)
+    }
+
+    /// Guidance such as a language redirect or a level change only shapes the next turn. If it
+    /// asked for a reply, a reply that drifted would be redirected, drift again and be redirected
+    /// again, and Mural would never stop talking.
+    func testGuidanceIsAddedWithoutMakingTheModelSpeak() {
+        var bridge = RealtimeBridge(startedAt: start)
+        let quiet = bridge.outbound(["type": "session.instructions.append", "event_id": "r", "content": "Return to the target language."])
+        XCTAssertEqual(quiet.map { $0["type"] as? String }, ["conversation.item.create"])
+        let unflagged = bridge.outbound(["type": "session.instructions.append", "event_id": "s", "content": "Slower.", RealtimeBridge.respondKey: false])
+        XCTAssertEqual(unflagged.count, 1)
+        XCTAssertTrue(bridge.inbound(["type": "response.done", "response": [:]]).send.isEmpty)
+    }
+
+    /// Requests made while a reply runs never pile up into a run of replies: only the newest waits.
+    func testOnlyTheNewestWaitingReplyIsKept() {
+        var bridge = RealtimeBridge(startedAt: start)
+        _ = bridge.outbound(["type": "session.instructions.append", "event_id": "a", "content": "1", RealtimeBridge.respondKey: true])
+        for id in ["b", "c", "d"] {
+            _ = bridge.outbound(["type": "session.instructions.append", "event_id": id, "content": id, RealtimeBridge.respondKey: true])
+        }
+        XCTAssertEqual(bridge.inbound(["type": "response.done", "response": [:]]).send.map { $0["event_id"] as? String }, ["d-response"])
+        XCTAssertTrue(bridge.inbound(["type": "response.done", "response": [:]]).send.isEmpty)
+    }
+
+    /// Recorded in the simulator: the model's first words came back through the microphone about a
+    /// second after it began, were transcribed as the learner, and interrupted it, eleven times in
+    /// 36 seconds. The microphone is closed while its audio plays and cleared as it stops.
+    func testTheMicrophoneClosesWhileTheModelSpeaksAndItsTailIsDiscarded() {
+        var bridge = RealtimeBridge(startedAt: start)
+        XCTAssertNil(bridge.microphone)
+        XCTAssertTrue(bridge.inbound(["type": "output_audio_buffer.started", "response_id": "r1"]).send.isEmpty)
+        XCTAssertEqual(bridge.microphone, .close)
+        bridge.microphone = nil
+        let stopped = bridge.inbound(["type": "output_audio_buffer.stopped", "response_id": "r1"])
+        XCTAssertEqual(bridge.microphone, .open)
+        XCTAssertEqual(stopped.send.map { $0["type"] as? String }, ["input_audio_buffer.clear"])
+        bridge.microphone = nil
+        _ = bridge.inbound(["type": "output_audio_buffer.started"]); bridge.microphone = nil
+        _ = bridge.inbound(["type": "output_audio_buffer.cleared"])
+        XCTAssertEqual(bridge.microphone, .open)
     }
 }
