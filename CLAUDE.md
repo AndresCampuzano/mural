@@ -42,6 +42,24 @@ Two models: `gpt-live-1` for realtime voice over WebRTC (`LiveTransport.swift`) 
 `gpt-5.6-luna` for translation, lookup, typed replies, delegated facts and post-turn
 assessment (`APIClient.swift`).
 
+The voice model is a choice in Settings (`VoiceModel`, `Core/Voice.swift`). `gpt-live-1` is the
+default and is billed per open minute, silence included. `gpt-realtime-2.1-mini` is an
+experimental, token-billed alternative: it speaks the Realtime API, which has none of
+`gpt-live-1`'s session events, so `RealtimeBridge` (`Core/RealtimeBridge.swift`) translates both
+ways and the coordinator is unchanged. Delegation becomes a function tool, instructions become
+system items plus a `response.create` (held back while a response runs), the learner's
+transcript comes from `gpt-4o-mini-transcribe` with the time they actually spoke, and cost is
+summed from each `response.done`. A new voice-protocol feature must be added to both paths.
+
+**Spending** (Settings → Spending by model, `SpendingView.swift`, `Core/Spending.swift`) shows
+monthly cost by model two ways. *Estimated here* is Mural's own figure from `SessionRecord`s.
+*Billed by OpenAI* reads the organization Costs API, which only accepts an **Admin key**
+(`sk-admin-…`). That key has its own Keychain slot (`CredentialStore.Slot.admin`) under the
+same protections as the project key, is entered on the device, and is only ever sent to
+`/v1/organization/costs` and `/v1/organization/projects`. It is org-wide, so the screen offers a
+project filter; ask the user to create it read-only. The same key rules apply: never ask for it
+in chat, never store it anywhere else.
+
 ### The learning loop
 
 The model proposes, deterministic Swift disposes. After a user turn, `TeachingPolicy.assessment`

@@ -29,6 +29,70 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { throw APIError.invalidResponse }
         return json
     }
+    /// A read with the Admin key, which only the organization endpoints accept. Same session,
+    /// so a redirect can never carry the key off api.openai.com.
+    private func adminGet(_ path: String, query: [URLQueryItem]) async throws -> [String: Any] {
+        guard let key = CredentialStore.read(.admin) else { throw APIError.missingAdminKey }
+        var components = URLComponents(string: "https://api.openai.com/v1/" + path)!
+        components.queryItems = query
+        var request = URLRequest(url: components.url!)
+        request.setValue("Bearer " + key, forHTTPHeaderField: "Authorization")
+        let (data, response) = try await session.data(for: request)
+        try Task.checkCancellation()
+        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard (200..<300).contains(http.statusCode) else { throw APIError.http(http.statusCode, Self.providerMessage(data)) }
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else { throw APIError.invalidResponse }
+        return json
+    }
+    /// Daily cost buckets from `start`, grouped by line item and project, following `next_page`
+    /// for at most `maximumPages` pages of 180 days each.
+    func costPages(since start: Date, maximumPages: Int = 3) async throws -> [[String: Any]] {
+        var pages: [[String: Any]] = [], page: String?
+        repeat {
+            var query = [URLQueryItem(name: "start_time", value: String(Int(start.timeIntervalSince1970))),
+                         URLQueryItem(name: "bucket_width", value: "1d"), URLQueryItem(name: "limit", value: "180"),
+                         URLQueryItem(name: "group_by", value: "line_item"), URLQueryItem(name: "group_by", value: "project_id")]
+            if let page { query.append(URLQueryItem(name: "page", value: page)) }
+            let json = try await adminGet("organization/costs", query: query)
+            pages.append(json)
+            page = json["has_more"] as? Bool == true ? json["next_page"] as? String : nil
+        } while page != nil && pages.count < maximumPages
+        return pages
+    }
+    /// Project IDs to names. Optional: a key without permission to list projects still shows costs.
+    func projectNames() async -> [String: String] {
+        guard let json = try? await adminGet("organization/projects", query: [URLQueryItem(name: "limit", value: "100")]) else { return [:] }
+        var names: [String: String] = [:]
+        for project in json["data"] as? [[String: Any]] ?? [] {
+            if let id = project["id"] as? String, let name = project["name"] as? String { names[id] = name }
+        }
+        return names
+    }
+    /// Opens a Realtime call: the SDP offer and the session travel as multipart form fields, and
+    /// the SDP answer comes back as the body. Sent through the same redirect-blocking session as
+    /// every other request, so the Authorization header only ever reaches api.openai.com.
+    func realtimeCall(sdp: String, session: [String: Any]) async throws -> String {
+        guard let key = CredentialStore.read() else { throw APIError.missingKey }
+        let boundary = "mural-" + UUID().uuidString
+        var body = Data()
+        func field(_ name: String, _ type: String, _ value: Data) {
+            body.append(Data("--\(boundary)\r\nContent-Disposition: form-data; name=\"\(name)\"\r\nContent-Type: \(type)\r\n\r\n".utf8))
+            body.append(value); body.append(Data("\r\n".utf8))
+        }
+        field("sdp", "application/sdp", Data(sdp.utf8))
+        field("session", "application/json", try JSONSerialization.data(withJSONObject: session))
+        body.append(Data("--\(boundary)--\r\n".utf8))
+        var request = URLRequest(url: URL(string: "https://api.openai.com/v1/realtime/calls")!)
+        request.httpMethod = "POST"; request.setValue("Bearer " + key, forHTTPHeaderField: "Authorization")
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        request.httpBody = body
+        let (data, response) = try await self.session.data(for: request)
+        try Task.checkCancellation()
+        guard let http = response as? HTTPURLResponse else { throw APIError.invalidResponse }
+        guard (200..<300).contains(http.statusCode) else { throw APIError.http(http.statusCode, Self.providerMessage(data)) }
+        guard let answer = String(data: data, encoding: .utf8), answer.hasPrefix("v=") else { throw APIError.invalidResponse }
+        return answer
+    }
     func respond(instructions: String, input: String, schema: [String: Any]? = nil, search: Bool = false) async throws -> APIResult {
         var body: [String: Any] = ["model": "gpt-5.6-luna", "store": false, "instructions": instructions,
                                   "input": [["role": "user", "content": input]], "max_output_tokens": schema == nil ? 1400 : 2200,
@@ -79,10 +143,11 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         "meanings": ["type": "array", "maxItems": Phrases.maximumPerLine, "items": string]
     ]) }
     enum APIError: LocalizedError {
-        case missingKey, invalidResponse, incomplete, refused, http(Int, String?)
+        case missingKey, missingAdminKey, invalidResponse, incomplete, refused, http(Int, String?)
         var errorDescription: String? {
             switch self {
             case .missingKey: "Add your OpenAI key in Settings to begin."
+            case .missingAdminKey: "Add an OpenAI Admin key to read your billed costs."
             case .invalidResponse, .incomplete: "OpenAI returned an incomplete response. Please try again."
             case .refused: "Mural couldn’t complete that request. Try a different topic."
             case .http(401, _): "Your OpenAI key wasn’t accepted. Check it in Settings."

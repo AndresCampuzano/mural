@@ -300,6 +300,7 @@ struct SettingsView: View {
     @State private var showingAPIKey = false
     private var store: LearningStore { coordinator.store }
     private var totalVoiceSeconds: Double { store.sessions.reduce(0) { $0 + $1.voiceSeconds } }
+    private var totalVoiceCost: Double { store.sessions.reduce(0) { $0 + $1.estimatedVoiceCost } }
     var body: some View {
         NavigationStack {
             Form {
@@ -352,15 +353,23 @@ struct SettingsView: View {
                     if !hasKey { Text("This version uses your OpenAI API key to start a conversation.") }
                 }
                 Section {
+                    Picker("Voice model", selection: Binding(get: { store.preferences.voiceModel }, set: { model in store.updatePreferences { $0.voiceModelID = model.rawValue } })) {
+                        ForEach(VoiceModel.allCases) { Text($0.title).tag($0) }
+                    }.pickerStyle(.menu).accessibilityIdentifier("voice-model-picker")
+                    Text(store.preferences.voiceModel.detail).font(.footnote).foregroundStyle(MuralColor.secondary)
+                        .accessibilityIdentifier("voice-model-detail")
                     Picker("Conversation limit", selection: Binding(get: { store.preferences.sessionMinutes }, set: { value in store.updatePreferences { $0.sessionMinutes = value } })) {
                         ForEach([5, 10, 15, 20, 30, 60], id: \.self) { Text("\($0) minutes").tag($0) }
                     }
-                    LabeledContent("Recorded voice time", value: "\(Int(totalVoiceSeconds / 60)) min \(Int(totalVoiceSeconds) % 60) sec")
-                    LabeledContent("Voice estimate", value: String(format: "$%.2f USD", totalVoiceSeconds / 60 * 0.05))
+                    NavigationLink { SpendingView(coordinator: coordinator) } label: {
+                        Label("Spending by model", systemImage: "chart.bar.xaxis")
+                    }.accessibilityIdentifier("spending-link")
+                    LabeledContent("Voice time, all conversations", value: "\(Int(totalVoiceSeconds / 60)) min \(Int(totalVoiceSeconds) % 60) sec")
+                    LabeledContent("Voice estimate, all conversations", value: String(format: "$%.2f USD", totalVoiceCost))
                     LabeledContent("Search calls recorded", value: "\(store.sessions.reduce(0) { $0 + $1.searchCalls })")
                     Link("OpenAI usage and billing", destination: URL(string: "https://platform.openai.com/usage")!)
                 } header: { Text("Keep it comfortable") } footer: {
-                    Text("Voice estimate uses $0.05/min as of 11 September 2026. Translation, teaching and search cost extra. Interrupted requests can be billed without a usage record here. Your OpenAI dashboard is authoritative. The time limit is local, not a billing cap.")
+                    Text("A new voice model starts with your next conversation, so the all-conversation totals only move once you talk on it. Spending by model shows each month, and the real bill with an Admin key. Voice estimate uses list prices as of \(VoicePricing.asOf): $0.05 per open minute for GPT-Live 1, and each response's tokens plus learner transcription for GPT-Realtime 2.1 mini. Translation, teaching and search cost extra. Interrupted requests can be billed without a usage record here. Your OpenAI dashboard is authoritative. The time limit is local, not a billing cap.")
                 }
                 Section {
                     Button("Export learning backup", systemImage: "square.and.arrow.up") {
