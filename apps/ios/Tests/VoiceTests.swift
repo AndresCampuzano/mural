@@ -44,14 +44,21 @@ final class VoiceTests: XCTestCase {
     }
 
     func testUsageIsPricedWithCachedTokensAtTheCachedRate() throws {
-        let usage = try XCTUnwrap(RealtimeUsage([
-            "input_token_details": ["text_tokens": 2000, "audio_tokens": 1000,
-                                    "cached_tokens_details": ["text_tokens": 1500, "audio_tokens": 400]],
-            "output_token_details": ["text_tokens": 100, "audio_tokens": 600]
-        ]))
-        let input: Double = 500 * 0.60 + 1500 * 0.06 + 600 * 10.0 + 400 * 0.30
-        let output: Double = 100 * 2.40 + 600 * 20.0
-        let expected = (input + output) / 1_000_000
+        let cached: [String: Any] = ["text_tokens": 1500, "audio_tokens": 400]
+        let input: [String: Any] = ["text_tokens": 2000, "audio_tokens": 1000, "cached_tokens_details": cached]
+        let output: [String: Any] = ["text_tokens": 100, "audio_tokens": 600]
+        let usage = try XCTUnwrap(RealtimeUsage(["input_token_details": input, "output_token_details": output]))
+        // Each term is written out on its own: a single long literal expression is slow enough
+        // to type-check that the CI compiler gives up on it.
+        let textIn: Double = 500 * VoicePricing.miniTextInput
+        let cachedTextIn: Double = 1500 * VoicePricing.miniCachedTextInput
+        let audioIn: Double = 600 * VoicePricing.miniAudioInput
+        let cachedAudioIn: Double = 400 * VoicePricing.miniCachedAudioInput
+        let textOut: Double = 100 * VoicePricing.miniTextOutput
+        let audioOut: Double = 600 * VoicePricing.miniAudioOutput
+        var total: Double = textIn
+        total += cachedTextIn; total += audioIn; total += cachedAudioIn; total += textOut; total += audioOut
+        let expected = total / 1_000_000
         XCTAssertEqual(usage.miniCost, expected, accuracy: 1e-12)
         XCTAssertNil(RealtimeUsage("not usage"))
         // Cached counts larger than the totals cannot produce a negative charge.
