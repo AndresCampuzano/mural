@@ -35,6 +35,9 @@ public enum VoicePricing {
     /// gpt-realtime-2.1-mini, per million tokens.
     public static let miniTextInput = 0.60, miniCachedTextInput = 0.06, miniTextOutput = 2.40
     public static let miniAudioInput = 10.0, miniCachedAudioInput = 0.30, miniAudioOutput = 20.0
+    /// The text model behind translation, assessment, lookups and typed replies, per million tokens.
+    public static let textModel = "gpt-5.6-luna"
+    public static let textInput = 0.20, textOutput = 0.75
 }
 
 /// Token usage from one completed response on a token-billed voice model.

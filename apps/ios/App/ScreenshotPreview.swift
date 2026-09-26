@@ -13,6 +13,22 @@ import MuralCore
     }
     static var tab: Int { screen == .themes ? 1 : screen == .words ? 2 : 0 }
 
+    /// Conversations over the last few months on both voice models, so Spending has bars to draw.
+    static func seedSpending(_ store: LearningStore) {
+        let calendar = Calendar.current
+        let plan: [(monthsAgo: Int, minutes: Double, mini: Double)] = [(4, 38, 0), (3, 52, 0), (2, 61, 0), (1, 44, 0.31), (0, 12, 0.46)]
+        for (index, entry) in plan.enumerated() {
+            guard let date = calendar.date(byAdding: .month, value: -entry.monthsAgo, to: .now) else { continue }
+            var live = SessionRecord(languageID: "ko"); live.startedAt = date; live.endedAt = date.addingTimeInterval(60)
+            live.voiceSeconds = entry.minutes * 60; live.inputTokens = 40_000 * (index + 1); live.outputTokens = 9_000 * (index + 1)
+            store.save(live)
+            if entry.mini > 0 {
+                var mini = SessionRecord(languageID: "ko"); mini.startedAt = date.addingTimeInterval(120); mini.endedAt = date.addingTimeInterval(180)
+                mini.voiceModelID = VoiceModel.realtimeMini.rawValue; mini.voiceCost = entry.mini; mini.voiceSeconds = 900
+                store.save(mini)
+            }
+        }
+    }
     static func seedWords(_ store: LearningStore) {
         let samples: [(lemma: String, meaning: String, form: String, quote: String, days: [Int])] = [
             ("마시다", "to drink", "마셔요", "오늘은 커피를 마셔요.", [9, 4, 0]),

@@ -37,7 +37,7 @@ import MuralCore
     var showSettings = false
     var showAIConsent = false
     private var startAfterConsent = false
-    private let api: APIClient
+    let api: APIClient
     private let transport = LiveTransport()
     private var connectionTask: Task<Void, Never>?
     private var assessmentTask: Task<Void, Never>?

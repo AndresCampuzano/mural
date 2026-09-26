@@ -203,6 +203,34 @@ final class MuralUITests: XCTestCase {
         XCTAssertTrue(app.buttons["voice-model-picker"].label.contains("GPT-Live 1"))
     }
 
+    /// Spending opens from Settings on Mural's own estimate when no Admin key is saved, asks for
+    /// one to show the real bill, and refuses a project key in its place.
+    func testSpendingShowsTheEstimateAndAsksForAnAdminKeyForTheBill() {
+        let app = XCUIApplication(); app.launchArguments = ["--preview", "--preview-spending"]; app.launch()
+        app.buttons["Settings"].tap()
+        let link = app.buttons["spending-link"]
+        for _ in 0..<6 where !link.isHittable { app.swipeUp() }
+        XCTAssertTrue(link.waitForExistence(timeout: 5))
+        link.tap()
+        XCTAssertTrue(app.staticTexts["spending-this-month"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["spending-chart"].exists)
+        XCTAssertNotEqual(app.staticTexts["spending-this-month"].label, "$0.00")
+        var screen = XCTAttachment(screenshot: app.screenshot())
+        screen.name = "Spending estimate"; screen.lifetime = .keepAlways; add(screen)
+        app.buttons["Billed by OpenAI"].tap()
+        let card = app.descendants(matching: .any)["spending-admin-card"]
+        if !card.waitForExistence(timeout: 10) { print(app.debugDescription) }
+        XCTAssertTrue(card.exists)
+        let field = app.secureTextFields["admin-key"]
+        for _ in 0..<4 where !field.isHittable { app.swipeUp() }
+        field.tap()
+        field.typeText("sk-proj-notanadminkey0000000000")
+        app.buttons["save-admin-key"].tap()
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Enter an OpenAI Admin key")).firstMatch.waitForExistence(timeout: 5))
+        screen = XCTAttachment(screenshot: app.screenshot())
+        screen.name = "Spending needs an Admin key"; screen.lifetime = .keepAlways; add(screen)
+    }
+
     func testSettingsOfferALevelAndASpeakingPace() {
         let app = launch()
         app.buttons["Settings"].tap()

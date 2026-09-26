@@ -170,35 +170,46 @@ import MuralCore
 }
 
 enum CredentialStore {
+    /// Each key has its own Keychain item under the same protections. The admin key reads
+    /// billing only; it is never sent anywhere the project key is not.
+    enum Slot: String { case project = "owner", admin = "admin" }
     private static let service = "no.william.mural.openai"
-    private static var query: [String: Any] { [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: "owner", kSecAttrSynchronizable as String: false] }
-    static func read() -> String? {
-        var q = query; q[kSecReturnData as String] = true; q[kSecMatchLimit as String] = kSecMatchLimitOne
+    private static func query(_ slot: Slot) -> [String: Any] {
+        [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: slot.rawValue, kSecAttrSynchronizable as String: false]
+    }
+    static func read(_ slot: Slot = .project) -> String? {
+        var q = query(slot); q[kSecReturnData as String] = true; q[kSecMatchLimit as String] = kSecMatchLimitOne
         var item: CFTypeRef?
         guard SecItemCopyMatching(q as CFDictionary, &item) == errSecSuccess, let data = item as? Data else { return nil }
         return String(data: data, encoding: .utf8)
     }
     static var hasKey: Bool { read() != nil }
-    static func save(_ key: String) throws {
+    static var hasAdminKey: Bool { read(.admin) != nil }
+    static func save(_ key: String, slot: Slot = .project) throws {
         let value = key.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard value.hasPrefix("sk-"), value.count >= 20, !value.contains(where: \.isWhitespace) else { throw KeyError.invalid }
+        let prefix = slot == .admin ? "sk-admin-" : "sk-"
+        guard value.hasPrefix(prefix), value.count >= 20, !value.contains(where: \.isWhitespace) else { throw slot == .admin ? KeyError.invalidAdmin : KeyError.invalid }
+        // A project key saved as the admin key, or the reverse, would be sent to the wrong kind of endpoint.
+        if slot == .project, value.hasPrefix("sk-admin-") { throw KeyError.adminAsProject }
         let data = Data(value.utf8)
-        let status = SecItemUpdate(query as CFDictionary, [kSecValueData as String: data] as CFDictionary)
+        let status = SecItemUpdate(query(slot) as CFDictionary, [kSecValueData as String: data] as CFDictionary)
         if status == errSecItemNotFound {
-            var q = query; q[kSecValueData as String] = data
+            var q = query(slot); q[kSecValueData as String] = data
             q[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
             guard SecItemAdd(q as CFDictionary, nil) == errSecSuccess else { throw KeyError.save }
         } else if status != errSecSuccess { throw KeyError.save }
     }
-    static func delete() throws {
-        let status = SecItemDelete(query as CFDictionary)
+    static func delete(_ slot: Slot = .project) throws {
+        let status = SecItemDelete(query(slot) as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else { throw KeyError.remove }
     }
     enum KeyError: LocalizedError {
-        case invalid, save, remove
+        case invalid, invalidAdmin, adminAsProject, save, remove
         var errorDescription: String? {
             switch self {
             case .invalid: "Enter a valid OpenAI API key."
+            case .invalidAdmin: "Enter an OpenAI Admin key. Admin keys begin with sk-admin-."
+            case .adminAsProject: "That is an Admin key. Use a project API key here; the Admin key belongs under Spending."
             case .save: "The key couldn’t be saved to this device’s Keychain."
             case .remove: "The key couldn’t be removed. Unlock this iPhone and try again."
             }

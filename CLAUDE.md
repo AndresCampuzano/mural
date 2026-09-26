@@ -51,6 +51,15 @@ system items plus a `response.create` (held back while a response runs), the lea
 transcript comes from `gpt-4o-mini-transcribe` with the time they actually spoke, and cost is
 summed from each `response.done`. A new voice-protocol feature must be added to both paths.
 
+**Spending** (Settings → Spending by model, `SpendingView.swift`, `Core/Spending.swift`) shows
+monthly cost by model two ways. *Estimated here* is Mural's own figure from `SessionRecord`s.
+*Billed by OpenAI* reads the organization Costs API, which only accepts an **Admin key**
+(`sk-admin-…`). That key has its own Keychain slot (`CredentialStore.Slot.admin`) under the
+same protections as the project key, is entered on the device, and is only ever sent to
+`/v1/organization/costs` and `/v1/organization/projects`. It is org-wide, so the screen offers a
+project filter; ask the user to create it read-only. The same key rules apply: never ask for it
+in chat, never store it anywhere else.
+
 ### The learning loop
 
 The model proposes, deterministic Swift disposes. After a user turn, `TeachingPolicy.assessment`

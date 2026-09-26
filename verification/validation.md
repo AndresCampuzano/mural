@@ -511,3 +511,34 @@ Not verified: **no conversation has been held on `gpt-realtime-2.1-mini`.** The 
 were taken from the Realtime API reference, not observed, so the first real call may surface a
 field that differs. Teaching quality in Korean and Japanese, delegation, pace, and whether the
 estimate matches the OpenAI dashboard are all unknown until it is used.
+
+## Spending by model
+
+Switching voice model left "Recorded voice time" and "Voice estimate" unchanged, which was
+correct but unhelpful: both total every past conversation, so they only move once a
+conversation happens on the new model. They are now labelled as all-conversation totals, and
+Settings links to a Spending screen with monthly cost by model over six months: a headline for
+this month, a stacked bar chart by model, and a per-model breakdown for any tapped month.
+
+It has two sources. *Estimated here* is built from this iPhone's sessions: voice cost under the
+model each session used, and text requests under `gpt-5.6-luna` at list prices. *Billed by
+OpenAI* reads `/v1/organization/costs` (daily buckets grouped by line item and project, up to
+three pages of 180 days) and names models from line items with snapshot dates and service
+prefixes removed. OpenAI only serves costs to an Admin key, so one can be saved in its own
+Keychain slot under the same protections as the project key, and a project key typed there is
+refused, as is an Admin key in the project-key field.
+
+- **129 core tests passed**, including six new `SpendingTests`: line-item parsing, monthly and
+  per-model sums across pages, the project filter, ignoring zero, non-USD and malformed rows,
+  the per-model estimate, and folding small models into "Other".
+- **All 25 native UI tests passed** on an iPhone 17 simulator, including a new one: with seeded preview sessions the estimate shows a non-zero
+  month and a chart, and the billed view asks for an Admin key and refuses a project key. Its
+  first run failed only because the card's accessibility identifier merged its children into
+  one element; it is now a container. A later run found the card took about three seconds to
+  appear on a loaded simulator, so that wait is 10 seconds.
+- Installed on the physical iPhone.
+
+Not verified: **the billed view has never received a real Costs API response.** The request
+shape and line-item format come from OpenAI's reference and cookbook; repeating `group_by` for
+two fields, the exact line-item names for `gpt-live-1` and the Realtime models, and how far the
+data lags are all unobserved.

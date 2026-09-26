@@ -13,6 +13,9 @@ struct RootView: View {
             store.updatePreferences { $0.hasOnboarded = true }
         }
         if let screen = ScreenshotPreview.screen { coordinator.prepareScreenshot(screen) }
+        if ProcessInfo.processInfo.arguments.contains("--preview"), ProcessInfo.processInfo.arguments.contains("--preview-spending") {
+            ScreenshotPreview.seedSpending(store)
+        }
         _tab = State(initialValue: ScreenshotPreview.tab)
         #endif
         _coordinator = State(initialValue: coordinator)
