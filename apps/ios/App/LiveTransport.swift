@@ -24,16 +24,12 @@ enum ConnectionState: Equatable { case idle, connecting, active, closing, ended,
     private var ownsAudioActivation = false
     private var lastInput = 0.0, lastOutput = 0.0
     private var reportedMuted = false
-    /// Present while a token-billed voice model carries the call, translating its events into the
-    /// session protocol the app speaks. Absent for gpt-live-1, which speaks that protocol itself.
-    private var bridge: RealtimeBridge?
 
     /// `speed` is the provider's playback multiple for generated speech. It is clamped to the
     /// documented 0.25–1.5 range and can only be set between turns, so Mural sends it once here.
     /// https://developers.openai.com/api/reference/resources/realtime/client-events
-    func connect(api: APIClient, instructions: String, history: [[String: Any]], speed: Double = 1, model: VoiceModel = .live) async throws {
+    func connect(api: APIClient, instructions: String, history: [[String: Any]], speed: Double = 1) async throws {
         disconnect()
-        bridge = model == .live ? nil : RealtimeBridge(startedAt: .now)
         closing = false
         paceApplied = true; paceRejection = nil
         let token = UUID(); attempt = token
@@ -87,23 +83,6 @@ enum ConnectionState: Equatable { case idle, connecting, active, closing, ended,
         }
         guard let sdp = peer.localDescription?.sdp else { throw TransportError.connection }
         let outputSpeed = speed.isFinite ? min(SpeechPace.range.upperBound, max(SpeechPace.range.lowerBound, speed)) : 1
-        // A token-billed model answers with the SDP alone; its session is announced on the data channel.
-        if model != .live {
-            func call(withSpeed: Bool) async throws -> String {
-                try await api.realtimeCall(sdp: sdp, session: RealtimeBridge.session(model: model, instructions: instructions, speed: withSpeed ? outputSpeed : nil))
-            }
-            let wantsSpeed = outputSpeed != 1
-            let answer: String
-            do { answer = try await call(withSpeed: wantsSpeed) }
-            catch APIClient.APIError.http(400, let detail) where wantsSpeed {
-                guard attempt == token else { throw CancellationError() }
-                paceApplied = false; paceRejection = detail
-                answer = try await call(withSpeed: false)
-            }
-            guard attempt == token else { throw CancellationError() }
-            try await answerAndWait(peer: peer, sdp: answer, token: token)
-            return
-        }
         func createSession(withSpeed: Bool) async throws -> [String: Any] {
             var output: [String: Any] = ["voice": "marin"]
             if withSpeed { output["speed"] = outputSpeed }
@@ -126,10 +105,6 @@ enum ConnectionState: Equatable { case idle, connecting, active, closing, ended,
         guard attempt == token else { throw CancellationError() }
         guard let transport = result["transport"] as? [String: Any], let answer = transport["sdp"] as? String else { throw TransportError.connection }
         if let session = result["session"] as? [String: Any] { onEvent?(["type": "mural.session.created", "session": session]) }
-        try await answerAndWait(peer: peer, sdp: answer, token: token)
-    }
-
-    private func answerAndWait(peer: RTCPeerConnection, sdp answer: String, token: UUID) async throws {
         try await withCheckedThrowingContinuation { (c: CheckedContinuation<Void, Error>) in
             peer.setRemoteDescription(RTCSessionDescription(type: .answer, sdp: answer)) { error in
                 if let error { c.resume(throwing: error) } else { c.resume() }
@@ -145,12 +120,6 @@ enum ConnectionState: Equatable { case idle, connecting, active, closing, ended,
     }
 
     @discardableResult func send(_ event: [String: Any]) -> Bool {
-        guard bridge != nil else { return sendRaw(event) }
-        guard let channel, channel.readyState == .open else { return false }
-        // A command the bridge holds back until the current response ends is still accepted.
-        return bridge!.outbound(event).allSatisfy { sendRaw($0) }
-    }
-    private func sendRaw(_ event: [String: Any]) -> Bool {
         guard let channel, channel.readyState == .open, let data = try? JSONSerialization.data(withJSONObject: event) else { return false }
         return channel.sendData(RTCDataBuffer(data: data, isBinary: false))
     }
@@ -161,12 +130,6 @@ enum ConnectionState: Equatable { case idle, connecting, active, closing, ended,
     func close() {
         closing = true; localTrack?.isEnabled = false; isMuted = true
         _ = send(["type": "session.close", "event_id": UUID().uuidString])
-        // The Realtime API has no close handshake: the call ends when the app disconnects, so the
-        // closing report is made here, after the caller has finished starting its own close.
-        if let bridge {
-            let events = bridge.closed()
-            Task { @MainActor [weak self] in events.forEach { self?.onEvent?($0) } }
-        }
     }
     func disconnect() {
         attempt = UUID(); meterTask?.cancel(); meterTask = nil
@@ -180,7 +143,6 @@ enum ConnectionState: Equatable { case idle, connecting, active, closing, ended,
             ownsAudioActivation = false
         }
         lastInput = 0; lastOutput = 0; reportedMuted = false; onLevels?(0, 0)
-        bridge = nil
     }
     private func startMetering() {
         meterTask?.cancel()
@@ -238,16 +200,8 @@ extension LiveTransport: RTCDataChannelDelegate, RTCPeerConnectionDelegate {
         Task { @MainActor [weak self] in
             guard let self, dataChannel === self.channel,
                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
-            guard self.bridge != nil else {
-                if json["type"] as? String == "session.started" { self.started = true }
-                self.onEvent?(json); return
-            }
-            let (emit, send) = self.bridge!.inbound(json)
-            send.forEach { _ = self.sendRaw($0) }
-            for event in emit {
-                if event["type"] as? String == "session.started" { self.started = true }
-                self.onEvent?(event)
-            }
+            if json["type"] as? String == "session.started" { self.started = true }
+            self.onEvent?(json)
         }
     }
     nonisolated func peerConnection(_ peerConnection: RTCPeerConnection, didChange stateChanged: RTCSignalingState) {}

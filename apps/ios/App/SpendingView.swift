@@ -242,10 +242,11 @@ struct SpendingView: View {
     // MARK: Formatting
 
     static func name(_ model: String) -> String {
-        if let voice = VoiceModel(rawValue: model) { return voice.title }
         switch model {
+        case VoicePricing.liveModel: return "GPT-Live 1"
+        case "gpt-realtime-2.1-mini": return "GPT-Realtime 2.1 mini"
         case VoicePricing.textModel: return "GPT-5.6 luna · text"
-        case VoiceModel.learnerTranscriptionModel: return "Transcription"
+        case "gpt-4o-mini-transcribe": return "Transcription"
         default: return model
         }
     }

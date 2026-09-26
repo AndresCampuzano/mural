@@ -24,7 +24,7 @@ import MuralCore
             store.save(live)
             if entry.mini > 0 {
                 var mini = SessionRecord(languageID: "ko"); mini.startedAt = date.addingTimeInterval(120); mini.endedAt = date.addingTimeInterval(180)
-                mini.voiceModelID = VoiceModel.realtimeMini.rawValue; mini.voiceCost = entry.mini; mini.voiceSeconds = 900
+                mini.voiceModelID = "gpt-realtime-2.1-mini"; mini.voiceCost = entry.mini; mini.voiceSeconds = 900
                 store.save(mini)
             }
         }

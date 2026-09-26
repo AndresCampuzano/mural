@@ -542,3 +542,22 @@ Not verified: **the billed view has never received a real Costs API response.** 
 shape and line-item format come from OpenAI's reference and cookbook; repeating `group_by` for
 two fields, the exact line-item names for `gpt-live-1` and the Realtime models, and how far the
 data lags are all unobserved.
+
+## Removing the cheaper voice
+
+`gpt-realtime-2.1-mini` is gone. The learner tried it again with the echo guard from the closed
+PR #11 (microphone held closed during playback, instructions no longer forcing replies) and
+found it clearly worse than `gpt-live-1`, so the model, its Settings choice, `RealtimeBridge`, the
+Realtime call request and the transport's bridging were removed, and `LiveTransport.swift` is
+back to its state before the choice was added. `gpt-live-1` is again the only voice.
+
+What stays: `SessionRecord.voiceModelID` and `voiceCost`, so sessions already recorded on the
+mini model keep their label and recorded cost in Spending and in older backups. A stored
+`Preferences.voiceModelID` from an install that chose the mini model is ignored on decode.
+
+- **119 core tests passed.** The bridge's tests went with it; two remain for the estimate and
+  for decoding backups written while the choice existed.
+- The Spending UI test, accidentally cut out along with the voice-model UI test, was restored,
+  with the confirmed-segment-tap fix from PR #11.
+- **All 24 native UI tests passed** on an iPhone 17 simulator.
+- Installed on the physical iPhone and the iPhone 15 Pro Max simulator.
