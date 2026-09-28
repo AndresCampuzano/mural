@@ -15,7 +15,8 @@ Nothing in this repository talks to a Proper service.
 A native iPhone app for learning a language by talking to it. You speak to an animated orb,
 it replies only in the language you are learning, optional subtitles show the meaning, and
 words you actually use are tracked with one to three recall bars and brought back in later
-conversations. The tagline is "the language app you eventually delete."
+conversations. The bars drive scheduling only; there is no Words tab, so the learner never
+browses a word list. Past conversations live in Settings. The tagline is "the language app you eventually delete."
 
 It teaches **Korean** and **Japanese**. The interface itself is always English.
 
@@ -109,8 +110,7 @@ screen offers one full-width row each, plus **Save all**, stacked so every phras
 whole rather than truncated into an ellipsis. Kept
 phrases live in `Archive.savedPhrases` and are read in the **Phrases** tab, target text first
 with its meaning underneath. Saving one shows a confirmation on the Talk screen that opens that
-tab, and the tab is a peer of Words rather than something inside it, because a recall bar is
-earned in conversation and a kept phrase is only a bookmark.
+tab. A recall bar is earned in conversation and a kept phrase is only a bookmark.
 
 This list is a notebook, **not evidence**. `LearningEngine` never reads it, saving grants no
 recall bar, and the interface says so. Keep it that way: the bars mean retrieval in

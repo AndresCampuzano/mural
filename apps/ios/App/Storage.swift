@@ -100,7 +100,6 @@ import MuralCore
         archive.savedPhrases = kept; persist()
     }
     func deletePhrase(_ id: UUID) { archive.savedPhrases = archive.phrases.filter { $0.id != id }; persist() }
-    func hideWord(_ id: String) { archive.preferences.hiddenWords.append(id); persist() }
     func correctPassage(sessionID: UUID, passageID: String, text: String) {
         guard let index = archive.sessions.firstIndex(where: { $0.id == sessionID }),
               let passage = archive.sessions[index].passages.first(where: { $0.id == passageID && $0.speaker == .user }) else { return }

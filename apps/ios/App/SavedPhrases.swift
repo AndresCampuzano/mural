@@ -67,9 +67,8 @@ struct PhraseChips: View {
 
 /// Kept phrases: the target language first, its meaning underneath.
 ///
-/// This is a tab of its own rather than something to find at the bottom of Words. The two lists
-/// are different in kind — a recall bar is earned in conversation and a kept phrase is only a
-/// bookmark — and giving each its own place says so without a sentence of explanation.
+/// A kept phrase is only a bookmark. Recall is earned in conversation, so nothing here feeds
+/// `LearningEngine`.
 struct PhrasesView: View {
     let coordinator: ConversationCoordinator
     @State private var deleting: SavedPhrase?
@@ -147,7 +146,7 @@ struct PhrasesView: View {
                     .font(.subheadline).listRowBackground(MuralColor.cream)
                     .accessibilityIdentifier("saved-phrases-meanings")
             }
-            Text("Saved phrases are a notebook, not a measure of recall. Keeping one here does not change your words or their bars.")
+            Text("Saved phrases are a notebook, not a measure of recall. Keeping one here does not change which words Mural brings back in conversation.")
                 .font(.footnote).foregroundStyle(MuralColor.secondary)
                 .listRowBackground(MuralColor.cream)
         }.scrollContentBackground(.hidden)

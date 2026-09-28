@@ -447,7 +447,6 @@ import MuralCore
     func prepareScreenshot(_ screen: ScreenshotPreview.Screen) {
         store.selectLanguage("ko")
         store.updatePreferences { $0.meaningVisible = true; $0.meaningLanguage = "English"; $0.hasOnboarded = true }
-        if screen == .words { ScreenshotPreview.seedWords(store) }
         guard screen == .conversation else { return }
         selectedTheme = language.themes.first { $0.id == "coffee" }
         var record = SessionRecord(languageID: "ko", themeID: selectedTheme?.id, title: selectedTheme?.title)

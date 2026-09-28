@@ -71,7 +71,7 @@ struct CourseUnitView: View {
                 chips("Grammar", unit.grammar)
                 ForEach(course.topics(in: unit)) { topic in topicCard(topic) }
                 topicCard(course.review(of: unit), modes: [.drill])
-                Text("Practice here counts like any conversation: words earn recall bars only when you use them yourself.")
+                Text("Practice here counts like any conversation: Mural brings back the words you use yourself in later conversations.")
                     .font(.footnote).foregroundStyle(MuralColor.secondary)
             }.padding(24)
         }.foregroundStyle(MuralColor.ink).background(MuralColor.cream)

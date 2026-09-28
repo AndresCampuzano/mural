@@ -99,15 +99,6 @@ struct MuralOrb: View {
     }
 }
 
-struct RecallBars: View {
-    let count: Int
-    var body: some View {
-        HStack(spacing: 4) {
-            ForEach(0..<3) { index in Capsule().fill(index < count ? MuralColor.orange : MuralColor.peach).frame(width: 18, height: 6) }
-        }.accessibilityLabel("\(count) of 3 recall bars")
-    }
-}
-
 struct PageHeading: View {
     var eyebrow: String
     var title: String
