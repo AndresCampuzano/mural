@@ -3,10 +3,9 @@
 **The language app you eventually delete.**
 
 <p align="center">
-  <img src="marketing/screenshots/iphone-17-korean/01-greeting.png" width="24%" alt="Mural greeting in Korean with voice controls" />
-  <img src="marketing/screenshots/iphone-17-korean/02-conversation.png" width="24%" alt="Korean café conversation with English meaning subtitles" />
-  <img src="marketing/screenshots/iphone-17-korean/03-themes.png" width="24%" alt="Conversation themes for learning Korean" />
-  <img src="marketing/screenshots/iphone-17-korean/04-words.png" width="24%" alt="Korean vocabulary with three levels of recall strength" />
+  <img src="marketing/screenshots/iphone-17-korean/01-greeting.png" width="32%" alt="Mural greeting in Korean with voice controls" />
+  <img src="marketing/screenshots/iphone-17-korean/02-conversation.png" width="32%" alt="Korean café conversation with English meaning subtitles" />
+  <img src="marketing/screenshots/iphone-17-korean/03-themes.png" width="32%" alt="Conversation themes for learning Korean" />
 </p>
 
 Mural is a native iPhone app for learning through conversation. Speak to a warm, animated orb, follow the meaning when you need it, and practise words again in later conversations. Mural adjusts the challenge from the evidence in your replies.
@@ -68,16 +67,16 @@ A free Personal Team can run the app on your own phone; TestFlight and App Store
 - **Your level:** *Starting out* has Mural explain in your subtitle language and teach one short phrase at a time; *Finding my feet* keeps the target language leading with a few words of help; *In at the deep end* is target language only. Change it at any time in Settings; a running conversation follows immediately.
 - **Speaking pace:** slow, gentle, natural or brisk. The provider slows the generated voice, and Mural is asked to phrase things more slowly to match. A new pace applies to your next conversation.
 - **Conversation practice:** live voice, gentle corrections, optional meaning subtitles, word lookup, mute, and a typed reply when speaking is inconvenient.
-- **Saved phrases:** when Mural uses a phrase, tap it under the caption to keep it — or **Save all**. Kept phrases are read in **Words → Saved phrases**, the target language first with its meaning underneath. A notebook, not a measure of recall: saving changes no word and no bar.
+- **Saved phrases:** when Mural uses a phrase, tap it under the caption to keep it — or **Save all**. Kept phrases are read in the **Phrases** tab, the target language first with its meaning underneath. A notebook, not a measure of recall: saving does not change which words Mural brings back.
 - **Themes:** 24 conversation settings, with cultural details supplied by each language module. You can also request a current topic; web search supplies source links.
 - **Adaptive practice:** vocabulary and provisional ability observations come from validated conversation evidence. Each learning language keeps separate progress.
-- **Recall bars:** one to three bars summarise repeated retrieval over time. Three bars require spaced evidence in different contexts. These are product heuristics, not calibrated forgetting probabilities or a language certificate.
+- **Words come back:** words you use yourself are tracked behind the scenes and brought back naturally in later conversations. The schedule is a product heuristic, not a calibrated forgetting model or a language certificate. There is no word list to browse.
 - **A fresh start:** the Talk screen returns to its greeting 15 seconds after a conversation ends. Tap **New conversation** to reset immediately. Your saved conversations and learning remain.
-- **Local records:** export or import a JSON learning backup, delete a conversation, or delete all learning data from Settings.
+- **Local records:** export or import a JSON learning backup, review or delete past conversations, or delete all learning data from Settings.
 
 The modules teach Korean as spoken in Seoul and Standard Japanese. Each language has its own conversation themes, teaching guidance and progress. Valid regional alternatives are accepted, and the interface itself stays in English.
 
-Japanese includes optional romaji in Talk, transcripts and word details, and its word lookup uses dictionary word boundaries because Japanese is written without spaces. Korean needs neither: Hangul is written with spaces and sounds out letter by letter. Romaji comes from system dictionary readings, so it is a sounding-out aid rather than a pronunciation guide — kanji with more than one reading, long vowels and pitch accent still need listening checks. Voice accent and teaching guidance are model instructions, and fluent-speaker review is still needed before making pronunciation or learning-effectiveness claims.
+Japanese includes optional romaji in Talk and transcripts, and its word lookup uses dictionary word boundaries because Japanese is written without spaces. Korean needs neither: Hangul is written with spaces and sounds out letter by letter. Romaji comes from system dictionary readings, so it is a sounding-out aid rather than a pronunciation guide — kanji with more than one reading, long vowels and pitch accent still need listening checks. Voice accent and teaching guidance are model instructions, and fluent-speaker review is still needed before making pronunciation or learning-effectiveness claims.
 
 ## Privacy and API costs
 

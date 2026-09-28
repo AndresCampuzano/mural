@@ -561,3 +561,18 @@ mini model keep their label and recorded cost in Spending and in older backups. 
   with the confirmed-segment-tap fix from PR #11.
 - **All 24 native UI tests passed** on an iPhone 17 simulator.
 - Installed on the physical iPhone and the iPhone 15 Pro Max simulator.
+
+## Words tab removed (28 September 2026)
+
+The Words tab, its word detail sheet, the recall-bar view and the `words` screenshot preview are
+gone. The app has three tabs: Talk, Themes and Phrases. **Past conversations** moved from the
+bottom of Words into Settings, in the backup section. The learning engine is unchanged: words
+are still validated, scheduled and brought back in conversation, and `Preferences.hiddenWords`
+stays so older backups decode. The Words screenshots and their references in README and release
+metadata were removed.
+
+- **119 core tests passed.**
+- **7 affected native UI tests passed** on an iPhone 17 simulator (tab navigation, past
+  conversations from Settings, kept phrases). The full UI suite was not rerun.
+- Installed on the physical iPhone and the iPhone 15 Pro Max simulator; the simulator showed
+  the three tabs.

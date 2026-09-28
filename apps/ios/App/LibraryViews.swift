@@ -91,80 +91,6 @@ struct CurrentTopicView: View {
     }
 }
 
-struct WordsView: View {
-    let coordinator: ConversationCoordinator
-    @State private var search = ""
-    @State private var selected: WordState?
-    @State private var sessions = false
-    private var learner: LearnerState { coordinator.store.learner }
-    private var words: [WordState] { learner.words.filter { search.isEmpty || $0.lemma.localizedCaseInsensitiveContains(search) || $0.meaning.localizedCaseInsensitiveContains(search) } }
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                PageHeading(eyebrow: "Little by little · \(coordinator.language.name)", title: "Your words.", subtitle: "Familiar words, ready for another conversation.")
-                if words.isEmpty {
-                    VStack(alignment: .leading, spacing: 18) {
-                        Image(systemName: "leaf").font(.system(size: 34, weight: .light))
-                        Text(search.isEmpty ? "They’ll grow from here." : "No matching words yet.").font(.system(.title2, design: .rounded, weight: .medium))
-                        Text(search.isEmpty ? "As we talk, useful words and phrases find a home here. Their strength grows when you recall them over time." : "Try another \(coordinator.language.name) word or English meaning.").font(.subheadline).foregroundStyle(MuralColor.secondary)
-                    }.padding(26).frame(maxWidth: .infinity, alignment: .leading).background(MuralColor.sage, in: RoundedRectangle(cornerRadius: 28))
-                } else {
-                    LazyVStack(spacing: 0) {
-                        ForEach(words) { word in
-                            Button { selected = word } label: {
-                                HStack(spacing: 18) {
-                                    VStack(alignment: .leading, spacing: 6) {
-                                        Text(word.lemma).font(.system(.title2, design: .rounded, weight: .medium))
-                                        Text(word.meaning).font(.subheadline).foregroundStyle(MuralColor.secondary)
-                                    }
-                                    Spacer(minLength: 10)
-                                    VStack(alignment: .trailing, spacing: 8) { RecallBars(count: word.bars); Text(word.label).font(.caption2).foregroundStyle(MuralColor.secondary) }
-                                }.padding(.vertical, 20)
-                            }.buttonStyle(.plain)
-                            Divider().overlay(MuralColor.peach)
-                        }
-                    }
-                }
-                HStack { Text("1 · Fragile"); Spacer(); Text("2 · Growing"); Spacer(); Text("3 · Steady") }.font(.caption).foregroundStyle(MuralColor.secondary)
-                Text("The bars estimate spoken recall, not permanent mastery. Using a word with visible meanings counts as supported practice.").font(.footnote).foregroundStyle(MuralColor.secondary)
-                if !learner.capabilities.isEmpty {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Finding your voice").font(.system(.title3, design: .rounded, weight: .semibold))
-                        ForEach(learner.capabilities, id: \.self) { Text($0).font(.subheadline) }
-                        Text("Observed across conversations. These are provisional, not formal level certificates.").font(.footnote).foregroundStyle(MuralColor.secondary)
-                    }.padding(22).background(MuralColor.butter, in: RoundedRectangle(cornerRadius: 24))
-                }
-                Button("Past conversations", systemImage: "clock.arrow.circlepath") { sessions = true }
-                    .font(.subheadline).padding(.vertical, 8)
-            }.padding(26)
-        }.foregroundStyle(MuralColor.ink).searchable(text: $search, prompt: "Find a word")
-            .sheet(item: $selected) { word in WordDetailView(word: word, store: coordinator.store) }
-            .sheet(isPresented: $sessions) { SessionHistoryView(store: coordinator.store) }
-    }
-}
-
-struct WordDetailView: View {
-    let word: WordState
-    let store: LearningStore
-    @Environment(\.dismiss) private var dismiss
-    var body: some View {
-        NavigationStack {
-            VStack(alignment: .leading, spacing: 24) {
-                Text(word.lemma).font(.system(.largeTitle, design: .rounded, weight: .medium))
-                ReadingHelp(text: word.lemma, language: store.language)
-                Text(word.meaning).font(.title3).foregroundStyle(MuralColor.secondary)
-                HStack { RecallBars(count: word.bars); Text(word.label).font(.subheadline) }
-                Text(word.explanation).font(.body)
-                Text("“\(word.example)”").font(.system(.title3, design: .rounded)).padding(20).frame(maxWidth: .infinity, alignment: .leading).background(MuralColor.peach, in: RoundedRectangle(cornerRadius: 22))
-                Text("\(word.independentCount) independent uses · Last seen \(word.lastSeen.formatted(date: .abbreviated, time: .omitted))").font(.footnote).foregroundStyle(MuralColor.secondary)
-                Button("Remove from my words", role: .destructive) { store.hideWord(word.id); dismiss() }.font(.footnote)
-                Spacer()
-            }.padding(28).frame(maxWidth: .infinity, alignment: .leading).background(MuralColor.cream).foregroundStyle(MuralColor.ink)
-                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
-        }.presentationDetents([.medium, .large])
-    }
-}
-
 struct SourcesView: View {
     var sources: [SourceLink]
     var date: Date
@@ -298,6 +224,7 @@ struct SettingsView: View {
     @State private var deleting = false
     @State private var notices = false
     @State private var showingAPIKey = false
+    @State private var sessions = false
     private var store: LearningStore { coordinator.store }
     private var totalVoiceSeconds: Double { store.sessions.reduce(0) { $0 + $1.voiceSeconds } }
     private var totalVoiceCost: Double { store.sessions.reduce(0) { $0 + $1.estimatedVoiceCost } }
@@ -367,6 +294,7 @@ struct SettingsView: View {
                     Text("Spending by model shows each month, and the real bill with an Admin key. Voice estimate uses $0.05 per open minute for GPT-Live 1, as of \(VoicePricing.asOf). Translation, teaching and search cost extra. Interrupted requests can be billed without a usage record here. Your OpenAI dashboard is authoritative. The time limit is local, not a billing cap.")
                 }
                 Section {
+                    Button("Past conversations", systemImage: "clock.arrow.circlepath") { sessions = true }
                     Button("Export learning backup", systemImage: "square.and.arrow.up") {
                         do { backup = BackupDocument(data: try store.exportData()); exporting = true } catch { message = error.localizedDescription }
                     }
@@ -404,6 +332,7 @@ struct SettingsView: View {
         .confirmationDialog("Delete all learning data on this phone?", isPresented: $deleting, titleVisibility: .visible) {
             Button("Delete all learning data", role: .destructive) { coordinator.deleteLearningData() }
         } message: { Text("This removes conversations, vocabulary, saved phrases and progress. Export a backup first if you want to keep them. Your API key and preferences remain.") }
+        .sheet(isPresented: $sessions) { SessionHistoryView(store: store) }
         .sheet(isPresented: $notices) {
             NavigationStack {
                 ScrollView { Text(Bundle.main.url(forResource: "ThirdPartyNotices", withExtension: "txt").flatMap { try? String(contentsOf: $0, encoding: .utf8) } ?? "Notices unavailable.").font(.footnote).padding(24).textSelection(.enabled) }

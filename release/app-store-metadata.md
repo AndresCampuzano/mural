@@ -41,7 +41,7 @@ Mural speaks in the language you are learning. Turn on meaning subtitles when yo
 
 Choose from 24 themes, from ordering coffee to discussing a film. For something current, ask Mural to find a topic and see the sources behind it.
 
-Your vocabulary grows from words you use in conversation. Three recall bars reflect repeated practice over time. Each language keeps its own conversations and progress; the bars and ability observations are guidance, not a language qualification.
+Words you use in conversation come back naturally in later ones. Each language keeps its own conversations and progress; this is guidance, not a language qualification.
 
 Practise Korean as spoken in Seoul, or Standard Japanese with optional romaji. The interface is in English. Your conversations and learning records stay in the app on your device. You can export a backup and import it on another installation.
 
@@ -51,11 +51,11 @@ Mural’s source is available under the MIT License at github.com/Chuloo/mural.
 
 ## Screenshot set
 
-Four 6.9-inch upload PNGs are prepared in [screenshots/en-US](screenshots/en-US/README.md). They use the English interface and Korean sample learning content, and must be recaptured whenever the sample content changes. The originals are retained separately; upload the opaque 1320 × 2868 files beside the screenshot README.
+Three 6.9-inch upload PNGs are prepared in [screenshots/en-US](screenshots/en-US/README.md). They use the English interface and Korean sample learning content, and must be recaptured whenever the sample content changes. The originals are retained separately; upload the opaque 1320 × 2868 files beside the screenshot README.
 
 ## TestFlight beta description
 
-Try Mural, a voice conversation app for language practice. The beta includes Korean and Japanese, with meaning subtitles, everyday themes, vocabulary recall bars and local learning backups. Japanese offers optional romaji. This build uses your own OpenAI project key and bills API usage to that project. An internet connection is required.
+Try Mural, a voice conversation app for language practice. The beta includes Korean and Japanese, with meaning subtitles, everyday themes, saved phrases and local learning backups. Japanese offers optional romaji. This build uses your own OpenAI project key and bills API usage to that project. An internet connection is required.
 
 ## What to test
 
@@ -75,7 +75,7 @@ Review flow:
 2. Open **Advanced → Use your own API key** and configure the review access provided privately, then return to Talk and start a conversation.
 3. Allow microphone access. Mural greets you in Korean. Reply aloud, or use the typed reply action.
 4. Toggle Meaning to show or hide subtitles. End the conversation; Meaning remains available until the screen resets after 15 seconds. **New conversation** resets immediately.
-5. Open Themes to try a setting. Open Words to inspect vocabulary and past conversations. Settings contains JSON export/import and local deletion.
+5. Open Themes to try a setting. Open Phrases to see saved phrases. Settings contains past conversations, JSON export/import and local deletion.
 
 Conversation and vocabulary records stay in local SwiftData storage; selected context goes to OpenAI for teaching. OpenAI is the provider for live voice, translation and optional current-topic search. The request disables provider application storage where supported; abuse-monitoring retention can still apply.
 

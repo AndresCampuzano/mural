@@ -80,7 +80,7 @@ final class MuralUITests: XCTestCase {
         XCTAssertEqual(app.staticTexts["target-caption"].label, "こんにちは！")
     }
 
-    func testSettingsThemesWordsAndReturnToKorean() {
+    func testSettingsThemesAndReturnToKorean() {
         let app = launch()
         app.buttons["Settings"].tap()
         app.buttons["learning-language-picker"].tap()
@@ -90,8 +90,6 @@ final class MuralUITests: XCTestCase {
         XCTAssertEqual(app.staticTexts["reading-text"].label, "konnichiwa！")
         app.tabBars.buttons["Themes"].tap()
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "コーヒーでも")).firstMatch.exists)
-        app.tabBars.buttons["Words"].tap()
-        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label ==[c] %@", "Little by little · Japanese")).firstMatch.exists)
         app.tabBars.buttons["Talk"].tap()
         app.buttons["Settings"].tap()
         app.buttons["learning-language-picker"].tap()
@@ -131,9 +129,16 @@ final class MuralUITests: XCTestCase {
         app.buttons["Done"].tap()
         app.buttons["new-conversation"].tap()
         XCTAssertEqual(app.staticTexts["target-caption"].label, "こんにちは！")
-        app.tabBars.buttons["Words"].tap()
-        app.buttons["Past conversations"].tap()
+        openPastConversations(app)
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "コーヒーでも")).firstMatch.exists)
+    }
+
+    /// Past conversations live in Settings, below the fold on smaller phones.
+    private func openPastConversations(_ app: XCUIApplication) {
+        app.buttons["Settings"].tap()
+        let button = app.buttons["Past conversations"]
+        for _ in 0..<6 where !button.isHittable { app.swipeUp() }
+        button.tap()
     }
 
     private func launch(ended: Bool = false) -> XCUIApplication {
@@ -150,13 +155,14 @@ final class MuralUITests: XCTestCase {
         app.buttons["Show meaning subtitles"].tap()
         XCTAssertEqual(app.staticTexts["meaning-caption"].label, "Hi!")
     }
-    func testThemeSurvivesNavigationToWords() {
+    func testThemeSurvivesNavigationToPhrases() {
         let app = launch()
+        XCTAssertFalse(app.tabBars.buttons["Words"].exists)
         app.tabBars.buttons["Themes"].tap()
         app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "커피 한잔")).firstMatch.tap()
         XCTAssertTrue(app.staticTexts["커피 한잔?"].exists)
-        app.tabBars.buttons["Words"].tap()
-        XCTAssertTrue(app.staticTexts["Your words."].exists)
+        app.tabBars.buttons["Phrases"].tap()
+        XCTAssertTrue(app.staticTexts["saved-phrases-empty"].waitForExistence(timeout: 5))
         app.tabBars.buttons["Talk"].tap()
         XCTAssertTrue(app.staticTexts["커피 한잔?"].exists)
         XCTAssertEqual(app.staticTexts["microphone-status"].label, "Microphone off")
@@ -378,7 +384,7 @@ final class MuralUITests: XCTestCase {
         app.buttons["Done"].tap()
     }
 
-    func testLanguageSwitchUpdatesGreetingThemesAndWords() {
+    func testLanguageSwitchUpdatesGreetingAndThemes() {
         let app = launch()
         app.tabBars.buttons["Themes"].tap()
         app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "커피 한잔")).firstMatch.tap()
@@ -390,8 +396,6 @@ final class MuralUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["A little everyday Japanese"].exists)
         app.tabBars.buttons["Themes"].tap()
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "コーヒーでも")).firstMatch.exists)
-        app.tabBars.buttons["Words"].tap()
-        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label ==[c] %@", "Little by little · Japanese")).firstMatch.exists)
         app.tabBars.buttons["Talk"].tap()
         app.buttons["Settings"].tap()
         app.buttons["learning-language-picker"].tap()
@@ -415,8 +419,7 @@ final class MuralUITests: XCTestCase {
         XCTAssertEqual(app.staticTexts["target-caption"].label, "안녕하세요!")
         XCTAssertEqual(app.staticTexts["microphone-status"].label, "Microphone off")
         XCTAssertFalse(app.staticTexts["커피 한잔?"].exists)
-        app.tabBars.buttons["Words"].tap()
-        app.buttons["Past conversations"].tap()
+        openPastConversations(app)
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "커피 한잔")).firstMatch.exists)
     }
 
@@ -447,25 +450,21 @@ final class MuralUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["saved-phrases-empty"].waitForExistence(timeout: 5))
     }
 
-    /// The kept phrases are a tab of their own, reachable from anywhere without scrolling, and
-    /// they are not left behind at the bottom of Words.
+    /// The kept phrases are a tab of their own, reachable from anywhere without scrolling.
     func testKeptPhrasesAreOneTapAwayFromEveryScreen() {
         let app = launch(ended: true)
         XCTAssertTrue(app.buttons["new-conversation"].waitForExistence(timeout: 5))
         let chip = app.buttons.matching(identifier: "phrase-chip").firstMatch
         XCTAssertTrue(chip.waitForExistence(timeout: 5))
         chip.tap()
-        for screen in ["Themes", "Words", "Talk"] {
+        for screen in ["Themes", "Talk"] {
             app.tabBars.buttons[screen].tap()
             app.tabBars.buttons["Phrases"].tap()
             XCTAssertEqual(app.staticTexts["saved-phrase-text"].label, "저는 커피를 좋아해요", screen)
         }
-        app.tabBars.buttons["Words"].tap()
-        XCTAssertFalse(app.buttons["saved-phrases"].exists)
-        XCTAssertTrue(app.buttons["Past conversations"].exists)
     }
 
-    /// The kept phrases can be searched like the words: a search with no match says so, and
+    /// The kept phrases can be searched: a search with no match says so, and
     /// clearing it brings the list back.
     func testKeptPhrasesCanBeSearched() {
         let app = launch(ended: true)

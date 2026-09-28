@@ -29,7 +29,6 @@ struct RootView: View {
                     // A course screen belongs to one language, so a switch starts the tab from the top.
                     .id(coordinator.language.id)
             }
-            Tab("Words", systemImage: "book", value: 2) { shell { WordsView(coordinator: coordinator) } }
             Tab("Phrases", systemImage: "bookmark", value: 3) { shell { PhrasesView(coordinator: coordinator) } }
         }
         .tint(MuralColor.ink)
