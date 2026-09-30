@@ -384,6 +384,23 @@ final class MuralUITests: XCTestCase {
         app.buttons["Done"].tap()
     }
 
+    func testPictureStudyOffersEverySourceWithoutSendingAnything() {
+        let app = launch()
+        app.tabBars.buttons["Themes"].tap()
+        let card = app.buttons["picture-card"]
+        XCTAssertTrue(card.waitForExistence(timeout: 5))
+        card.tap()
+        XCTAssertTrue(app.buttons["picture-photos"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["picture-files"].exists)
+        // Nothing is read until a picture is chosen, so there is nothing to practise yet.
+        XCTAssertFalse(app.buttons["picture-read"].exists)
+        XCTAssertFalse(app.buttons["picture-start"].exists)
+        let screen = XCTAttachment(screenshot: app.screenshot())
+        screen.name = "Picture study"; screen.lifetime = .keepAlways; add(screen)
+        app.buttons["Close"].tap()
+        XCTAssertTrue(card.waitForExistence(timeout: 5))
+    }
+
     func testLanguageSwitchUpdatesGreetingAndThemes() {
         let app = launch()
         app.tabBars.buttons["Themes"].tap()
