@@ -36,7 +36,10 @@ struct RootView: View {
         .sheet(isPresented: $coordinator.showAIConsent, onDismiss: { coordinator.resumeAfterAIConsent() }) {
             AIConsentView(agree: { coordinator.acceptAIConsent() }, decline: { coordinator.declineAIConsent() })
         }
-        .fullScreenCover(isPresented: $onboarding) { OnboardingView(coordinator: coordinator) { coordinator.store.updatePreferences { $0.hasOnboarded = true }; onboarding = false } }
+        .fullScreenCover(isPresented: $onboarding) {
+            OnboardingView(coordinator: coordinator) { coordinator.store.updatePreferences { $0.hasOnboarded = true }; onboarding = false }
+                .readableColumn().background(MuralColor.cream)
+        }
         .alert("A little interruption", isPresented: Binding(get: { coordinator.error != nil || coordinator.store.error != nil }, set: { if !$0 { coordinator.error = nil; coordinator.store.error = nil } })) {
             Button("OK", role: .cancel) { coordinator.error = nil; coordinator.store.error = nil }
         } message: { Text(coordinator.error ?? coordinator.store.error ?? "") }
@@ -63,7 +66,7 @@ struct RootView: View {
     }
     private func shell<Content: View>(@ViewBuilder content: () -> Content) -> some View {
         NavigationStack {
-            content().background(MuralColor.cream).toolbar {
+            content().readableColumn().background(MuralColor.cream).toolbar {
                 ToolbarItem(placement: .topBarLeading) { Brand().fixedSize() }.sharedBackgroundVisibility(.hidden)
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { coordinator.showSettings = true } label: { Image(systemName: "slider.horizontal.3") }

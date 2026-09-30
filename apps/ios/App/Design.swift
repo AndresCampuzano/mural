@@ -12,6 +12,13 @@ enum MuralColor {
     static let panels = [peach, lilac, sage, butter]
 }
 
+extension View {
+    /// Keeps a screen to a phone-like column on iPad, so cards and lines do not stretch edge to edge.
+    func readableColumn() -> some View {
+        frame(maxWidth: 680).frame(maxWidth: .infinity)
+    }
+}
+
 struct Brand: View {
     var body: some View {
         HStack(spacing: 8) {
