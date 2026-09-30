@@ -576,3 +576,26 @@ metadata were removed.
   conversations from Settings, kept phrases). The full UI suite was not rerun.
 - Installed on the physical iPhone and the iPhone 15 Pro Max simulator; the simulator showed
   the three tabs.
+
+## iPad support and study from a picture or PDF (30 September 2026)
+
+The app targets iPhone and iPad (`TARGETED_DEVICE_FAMILY` 1,2). iPad rotates freely; each tab
+and onboarding sit in a 680pt column. A new **From a picture or PDF** card on Themes takes a
+photo (camera), a picture (Photos) or an image or PDF (Files), sends it to `gpt-5.6-luna` once,
+and shows a title, summary, any target-language text and up to 12 words. The learner then sets
+up a conversation about it or takes a written test, choosing a `GuidanceLevel` and `SpeechPace`
+that apply to that picture only. Terms not written in the module's script are dropped. Test
+choices and exact written answers are marked in Swift; other written answers are marked by the
+model in one batch, and a reply that does not line up marks nothing. Tests never reach
+`LearningEngine`. PDFs are cut to their first 10 pages; nothing is stored on the device.
+
+- **130 core tests passed**, including 11 new `PictureTests` that loop over
+  `LanguageRegistry.all` and check that the other module's name never leaks into a prompt.
+- **1 new native UI test passed** on an iPhone 17 simulator (the picture sheet opens with its
+  sources and sends nothing). The full UI suite was not rerun.
+- Built for and ran on an iPad Pro 11-inch simulator (iOS 27); the Talk tab looked right in
+  portrait. Landscape and the other tabs were not checked.
+- Installed and launched on a physical iPad Pro 11-inch (4th generation, iPadOS 27.0).
+- **Not verified:** reading a real picture or PDF, generating or marking a test, or a picture
+  conversation, because no API key was used in this session. That `gpt-5.6-luna` accepts
+  `input_image` and `input_file` in this form has not been confirmed by a live request.

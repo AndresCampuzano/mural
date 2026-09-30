@@ -8,6 +8,7 @@ struct ThemesView: View {
     @State private var search = ""
     @State private var category = "All"
     @State private var current = false
+    @State private var picture = false
     @Environment(\.dynamicTypeSize) private var typeSize
     private var themes: [ConversationTheme] {
         coordinator.language.themes.filter { (category == "All" || $0.category == category) && (search.isEmpty || $0.title.localizedCaseInsensitiveContains(search) || $0.category.localizedCaseInsensitiveContains(search)) }
@@ -24,6 +25,7 @@ struct ThemesView: View {
                 if let course = coordinator.language.course {
                     CourseCard(course: course, language: coordinator.language) { choose($0) }
                 }
+                PictureCard { picture = true }
                 ScrollView(.horizontal) {
                     HStack(spacing: 8) {
                         ForEach(categories, id: \.self) { c in
@@ -52,6 +54,12 @@ struct ThemesView: View {
         }.foregroundStyle(MuralColor.ink)
             .searchable(text: $search, prompt: "Find a conversation")
             .sheet(isPresented: $current) { CurrentTopicView(coordinator: coordinator) { choose(coordinator.selectedTheme) } }
+            .sheet(isPresented: $picture) {
+                // The theme is chosen first, because choosing one clears a practice's own level and pace.
+                PictureStudyView(coordinator: coordinator) { study, level, pace in
+                    choose(study.theme(language: coordinator.language)); coordinator.practice(study, level: level, pace: pace)
+                }
+            }
     }
 }
 

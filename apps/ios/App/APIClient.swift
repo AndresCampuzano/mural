@@ -7,12 +7,24 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
 
 struct APIUsage { var input = 0; var output = 0; var searches = 0 }
 struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUsage }
+/// A picture or document sent with a request. Held in memory for that request only.
+enum APIAttachment {
+    case jpeg(Data)
+    case pdf(Data, filename: String)
+    var content: [String: Any] {
+        switch self {
+        case .jpeg(let data): ["type": "input_image", "image_url": "data:image/jpeg;base64," + data.base64EncodedString(), "detail": "high"]
+        case .pdf(let data, let filename): ["type": "input_file", "filename": filename, "file_data": "data:application/pdf;base64," + data.base64EncodedString()]
+        }
+    }
+}
 
 @MainActor final class APIClient {
     private let session: URLSession
     init() {
         let config = URLSessionConfiguration.ephemeral
-        config.timeoutIntervalForRequest = 45; config.timeoutIntervalForResource = 60
+        // A PDF or a high-detail picture takes longer to upload and read than a line of text.
+        config.timeoutIntervalForRequest = 45; config.timeoutIntervalForResource = 120
         config.httpCookieStorage = nil; config.urlCache = nil
         session = URLSession(configuration: config, delegate: NoRedirect(), delegateQueue: nil)
     }
@@ -68,9 +80,11 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
         }
         return names
     }
-    func respond(instructions: String, input: String, schema: [String: Any]? = nil, search: Bool = false) async throws -> APIResult {
+    func respond(instructions: String, input: String, schema: [String: Any]? = nil, search: Bool = false,
+                 attachments: [APIAttachment] = [], maxOutputTokens: Int? = nil) async throws -> APIResult {
+        let content: Any = attachments.isEmpty ? input : [["type": "input_text", "text": input]] + attachments.map(\.content)
         var body: [String: Any] = ["model": "gpt-5.6-luna", "store": false, "instructions": instructions,
-                                  "input": [["role": "user", "content": input]], "max_output_tokens": schema == nil ? 1400 : 2200,
+                                  "input": [["role": "user", "content": content]], "max_output_tokens": maxOutputTokens ?? (schema == nil ? 1400 : 2200),
                                   "reasoning": ["effort": "low"]]
         if let schema { body["text"] = ["format": ["type": "json_schema", "name": "mural_result", "strict": true, "schema": schema]] }
         if search { body["tools"] = [["type": "web_search"]]; body["tool_choice"] = "auto"; body["max_tool_calls"] = 1 }
@@ -112,6 +126,21 @@ struct APIResult { var text: String; var sources: [SourceLink]; var usage: APIUs
             "lemma": string, "meaning": string, "form": string, "quote": string, "language": ["type": "string", "enum": Array(Set([language.id, "en", "mixed", "uncertain"])).sorted()],
             "kind": ["type": "string", "enum": ["exposure", "understanding", "assisted", "independent", "lapse"]],
             "confidence": ["type": "number", "minimum": 0, "maximum": 1], "sourceIDs": ["type": "array", "items": string]
+        ])]
+    ]) }
+    static func pictureStudySchema() -> [String: Any] { object([
+        "title": string, "summary": string, "targetText": string, "situation": string,
+        "vocabulary": ["type": "array", "maxItems": PictureStudy.maximumTerms, "items": object(["text": string, "meaning": string])]
+    ]) }
+    static func pictureTestSchema() -> [String: Any] { object([
+        "questions": ["type": "array", "maxItems": 10, "items": object([
+            "kind": ["type": "string", "enum": ["choice", "written"]], "prompt": string, "passage": string,
+            "options": ["type": "array", "maxItems": 5, "items": string], "answer": string, "explanation": string
+        ])]
+    ]) }
+    static func pictureGradingSchema() -> [String: Any] { object([
+        "verdicts": ["type": "array", "maxItems": 10, "items": object([
+            "verdict": ["type": "string", "enum": ["correct", "close", "incorrect"]], "feedback": string
         ])]
     ]) }
     static func phraseMeaningSchema() -> [String: Any] { object([
