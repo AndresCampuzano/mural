@@ -9,7 +9,7 @@ struct CourseCard: View {
     var body: some View {
         NavigationLink { CourseView(course: course, language: language, choose: choose) } label: {
             HStack(spacing: 16) {
-                Image(systemName: "books.vertical").font(.system(size: 26, weight: .regular)).foregroundStyle(MuralColor.icons[3])
+                Image(systemName: "books.vertical").font(.system(size: 26, weight: .regular)).foregroundStyle(MuralColor.ink)
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Your course").font(.system(.caption, design: .rounded, weight: .medium)).foregroundStyle(MuralColor.secondary)
                     Text(course.title).font(.system(.headline, design: .rounded)).multilineTextAlignment(.leading)
@@ -18,7 +18,7 @@ struct CourseCard: View {
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right").foregroundStyle(MuralColor.secondary)
             }.padding(20).frame(maxWidth: .infinity, alignment: .leading)
-                .background(MuralColor.butter.opacity(0.7), in: RoundedRectangle(cornerRadius: 26))
+                .background(MuralColor.surface, in: RoundedRectangle(cornerRadius: 26))
                 .contentShape(Rectangle())
         }.buttonStyle(.plain).accessibilityIdentifier("course-card")
     }
@@ -47,7 +47,7 @@ struct CourseView: View {
                                     Text("\(course.topics(in: unit).count) topics").font(.caption2).foregroundStyle(MuralColor.secondary)
                                     Image(systemName: "chevron.right").font(.caption).foregroundStyle(MuralColor.secondary)
                                 }.padding(16).frame(maxWidth: .infinity, alignment: .leading)
-                                    .background(MuralColor.panels[unit.number % 4], in: RoundedRectangle(cornerRadius: 22))
+                                    .background(MuralColor.surface, in: RoundedRectangle(cornerRadius: 22))
                                     .contentShape(Rectangle())
                             }.buttonStyle(.plain).accessibilityIdentifier("course-unit-\(unit.number)")
                         }
@@ -81,7 +81,7 @@ struct CourseUnitView: View {
             Text(label.uppercased()).font(.system(.caption2, design: .rounded, weight: .medium)).tracking(1.2).foregroundStyle(MuralColor.secondary)
             FlowLayout(spacing: 6) {
                 ForEach(items, id: \.self) { item in
-                    Text(item).font(.caption).padding(.horizontal, 12).padding(.vertical, 8).background(MuralColor.surface.opacity(0.7), in: Capsule())
+                    Text(item).font(.caption).padding(.horizontal, 12).padding(.vertical, 8).background(MuralColor.surface, in: Capsule())
                 }
             }
         }
@@ -105,13 +105,14 @@ struct CourseUnitView: View {
                     Button { choose(course.theme(for: topic, mode: mode, language: language)) } label: {
                         Label(mode.title, systemImage: mode.symbol).font(.subheadline).lineLimit(1).minimumScaleFactor(0.8)
                             .padding(.horizontal, 14).padding(.vertical, 11).frame(maxWidth: .infinity)
-                            .background(mode == .conversation ? MuralColor.peach : MuralColor.surface.opacity(0.75), in: Capsule())
+                            .foregroundStyle(mode == .conversation ? MuralColor.onAccent : MuralColor.ink)
+                            .background(mode == .conversation ? MuralColor.accent : MuralColor.raised, in: Capsule())
                             .contentShape(Capsule())
                     }.buttonStyle(.plain).accessibilityIdentifier("course-\(topic.id)-\(mode.rawValue)")
                 }
             }
         }.padding(18).frame(maxWidth: .infinity, alignment: .leading)
-            .background(MuralColor.panels[unit.number % 4], in: RoundedRectangle(cornerRadius: 24))
+            .background(MuralColor.surface, in: RoundedRectangle(cornerRadius: 24))
     }
 }
 

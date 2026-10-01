@@ -710,3 +710,39 @@ lower, so the island no longer reaches the status line.
 
 - **143 core tests passed.** Talk (both languages) and Themes checked by screenshot on an iPhone 17
   simulator; installed on the iPhone and iPad.
+
+## One card colour, red actions, turf islands and a sunrise (1 October 2026)
+
+Cards no longer vary by colour. The old palette gave every fourth theme card, course unit, test
+question and conversation practice a much lighter grey than its neighbours; now every card, row,
+chip and field on a page is `MuralColor.surface`, a control inside a card is `raised`, and only a
+selected chip or option is `selected`. Theme icons are all white. The accent is a deep red
+(`MuralColor.accent`, white text on it, about 4.8:1), kept for the main action on a screen: the
+microphone, Just talk, New scan, Continue, Agree and continue, Send reply, Talk about this, Find a
+topic (until a topic is found), Read and keep it, setting up a scan practice, Check answers, Take
+it again, Save Admin key, and Conversation on each course topic. Selection marks went from the old
+white accent to `ink`, so they look the same as before.
+
+The landmarks stand on turf alone. The rocky cone, the stones round the rim and the slope stones
+are gone; the island is a lathe-turned slab of grass with a rounded, slightly uneven edge whose
+side deepens to dark green. The grass is about 15,000 curved two-segment blades in tufts that
+splay, lean out over the edge, darken towards the root and where a building or trunk crowds them,
+and vary in patches, plus a fringe over the rounded edge and blades out of the side; small
+flowers remain. The cherry, maple, pine and shrubs have more and smaller cards; limbs, pillars,
+lanterns and rings have more segments; the roofs curve in finer steps with more end tiles; the
+pavilion has painted rafter ends under its eaves, twice the balusters and a finer row of painted
+motifs; the pagoda spire has nine rings.
+
+The old key, rim and fill lights became `Sunrise`: a low sun from the front left, a rose rim from
+behind, cool skylight from above, a warm bounce from below and a little ambient light. When the
+scene appears the sun climbs over six seconds from just above the horizon, red and dim, to about
+24 degrees, gold and bright, and holds; the SwiftUI glow behind the island warms from 45 to 100
+per cent with it, and now spans the overscanned canvas rather than the slot. Reduce Motion starts
+the scene risen.
+
+- **143 core tests passed.** Talk in both languages (at dawn and after sunrise) and Themes checked
+  by screenshot on an iPad Pro 11-inch (M5) simulator.
+- Building the pavilion scene took about 0.12 s on the main thread in a Debug simulator build,
+  most of it the grass mesh. A Release build should be faster; not measured on a device.
+- **Not measured:** frame time, battery or thermal cost of the denser grass and foliage on a
+  device.

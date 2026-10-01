@@ -11,7 +11,7 @@ struct PictureCard: View {
     var body: some View {
         Button(action: open) {
             HStack(spacing: 16) {
-                Image(systemName: "text.viewfinder").font(.system(size: 26, weight: .regular)).foregroundStyle(MuralColor.icons[1])
+                Image(systemName: "text.viewfinder").font(.system(size: 26, weight: .regular)).foregroundStyle(MuralColor.ink)
                 VStack(alignment: .leading, spacing: 4) {
                     Text("From a picture or PDF").font(.system(.headline, design: .rounded))
                     Text("Scan a page, a menu or a sign once, then talk about it or take tests as often as you like.")
@@ -20,7 +20,7 @@ struct PictureCard: View {
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right").foregroundStyle(MuralColor.secondary)
             }.padding(20).frame(maxWidth: .infinity, alignment: .leading)
-                .background(MuralColor.lilac.opacity(0.8), in: RoundedRectangle(cornerRadius: 26))
+                .background(MuralColor.surface, in: RoundedRectangle(cornerRadius: 26))
                 .contentShape(Rectangle())
         }.buttonStyle(.plain).accessibilityIdentifier("picture-card")
     }
@@ -47,7 +47,7 @@ struct ScansView: View {
                             subtitle: "Mural keeps what it read from each picture or PDF, so talking about it or taking another test never sends the file again.")
                 Button { adding = true } label: {
                     HStack { Image(systemName: "plus.viewfinder"); Text("New scan"); Spacer(); Image(systemName: "arrow.up.right") }
-                        .font(.headline).padding(22).background(MuralColor.peach, in: RoundedRectangle(cornerRadius: 26))
+                        .font(.headline).padding(22).foregroundStyle(MuralColor.onAccent).background(MuralColor.accent, in: RoundedRectangle(cornerRadius: 26))
                         .contentShape(Rectangle())
                 }.buttonStyle(.plain).accessibilityIdentifier("scan-new")
                 if store.scans.isEmpty {
@@ -84,7 +84,7 @@ struct ScansView: View {
                 Button("Delete", systemImage: "trash", role: .destructive) { deleting = scan }
             } label: { Image(systemName: "ellipsis").padding(12).contentShape(Rectangle()) }
                 .accessibilityLabel("More for \(scan.name)")
-        }.padding(14).background(MuralColor.surface.opacity(0.8), in: RoundedRectangle(cornerRadius: 24))
+        }.padding(14).background(MuralColor.surface, in: RoundedRectangle(cornerRadius: 24))
             .contextMenu {
                 Button("Rename", systemImage: "pencil") { renaming = scan }
                 Button("Delete", systemImage: "trash", role: .destructive) { deleting = scan }
@@ -101,7 +101,7 @@ struct ScanThumbnail: View {
                 Image(uiImage: image).resizable().scaledToFill()
             } else {
                 Image(systemName: scan.kind == .pdf ? "doc.text" : "photo").font(.system(size: side * 0.35, weight: .light))
-                    .foregroundStyle(MuralColor.secondary).frame(maxWidth: .infinity, maxHeight: .infinity).background(MuralColor.butter)
+                    .foregroundStyle(MuralColor.secondary).frame(maxWidth: .infinity, maxHeight: .infinity).background(MuralColor.raised)
             }
         }.frame(width: side, height: side).clipShape(RoundedRectangle(cornerRadius: side * 0.22)).accessibilityHidden(true)
     }
@@ -217,7 +217,7 @@ struct NewScanView: View {
             Image(systemName: symbol).font(.system(size: 22, weight: .light))
             Text(title).font(.subheadline)
         }.frame(maxWidth: .infinity).padding(.vertical, 18)
-            .background(MuralColor.surface.opacity(0.8), in: RoundedRectangle(cornerRadius: 20))
+            .background(MuralColor.surface, in: RoundedRectangle(cornerRadius: 20))
             .contentShape(Rectangle())
     }
     private func preview(_ picture: PreparedPicture) -> some View {
@@ -227,7 +227,7 @@ struct NewScanView: View {
                 .accessibilityLabel(picture.detail)
             Text(picture.detail).font(.caption).foregroundStyle(MuralColor.secondary)
             Button { read(picture) } label: {
-                HStack { Text(loading ? "Reading…" : "Read and keep it"); Spacer(); if loading { ProgressView() } else { Image(systemName: "text.viewfinder") } }
+                HStack { Text(loading ? "Reading…" : "Read and keep it"); Spacer(); if loading { ProgressView().tint(MuralColor.onAccent) } else { Image(systemName: "text.viewfinder") } }
                     .font(.headline).padding(18).foregroundStyle(MuralColor.onAccent).background(MuralColor.accent, in: Capsule())
             }.buttonStyle(.plain).disabled(loading).accessibilityIdentifier("picture-read")
         }
@@ -347,7 +347,7 @@ struct ScanDetailView: View {
                     label("In the picture")
                     Text(study.targetText).font(.system(.title3, design: .rounded)).textSelection(.enabled)
                     ReadingHelp(text: study.targetText, language: language)
-                }.padding(18).frame(maxWidth: .infinity, alignment: .leading).background(MuralColor.surface.opacity(0.75), in: RoundedRectangle(cornerRadius: 22))
+                }.padding(18).frame(maxWidth: .infinity, alignment: .leading).background(MuralColor.surface, in: RoundedRectangle(cornerRadius: 22))
             }
             if !study.vocabulary.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
@@ -364,7 +364,7 @@ struct ScanDetailView: View {
                     }.font(.subheadline).padding(.vertical, 6).contentShape(Rectangle()).accessibilityIdentifier("picture-save-words")
                     if let savedWords { Text(savedWords).font(.caption).foregroundStyle(MuralColor.secondary) }
                     Text("Phrases are a notebook: saving one doesn’t earn a recall bar.").font(.caption2).foregroundStyle(MuralColor.secondary)
-                }.padding(18).frame(maxWidth: .infinity, alignment: .leading).background(MuralColor.sage.opacity(0.8), in: RoundedRectangle(cornerRadius: 22))
+                }.padding(18).frame(maxWidth: .infinity, alignment: .leading).background(MuralColor.surface, in: RoundedRectangle(cornerRadius: 22))
             }
         }
     }
@@ -397,7 +397,7 @@ struct ScanDetailView: View {
                 Button("Delete", systemImage: "trash", role: .destructive) { deleting = practice }
             } label: { Image(systemName: "ellipsis").padding(10).contentShape(Rectangle()) }
                 .accessibilityLabel("More for \(practice.name)")
-        }.padding(14).background(MuralColor.panels[practice.activity == .conversation ? 0 : 1].opacity(0.8), in: RoundedRectangle(cornerRadius: 20))
+        }.padding(14).background(MuralColor.surface, in: RoundedRectangle(cornerRadius: 20))
     }
 
     private func summary(_ practice: SavedPractice) -> String {
@@ -425,7 +425,7 @@ struct ScanDetailView: View {
                 ForEach(GuidanceLevel.allCases) { option in
                     Button { level = option } label: {
                         HStack(alignment: .top, spacing: 12) {
-                            Image(systemName: level == option ? "largecircle.fill.circle" : "circle").foregroundStyle(level == option ? MuralColor.accent : MuralColor.secondary)
+                            Image(systemName: level == option ? "largecircle.fill.circle" : "circle").foregroundStyle(level == option ? MuralColor.ink : MuralColor.secondary)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(option.title).font(.subheadline.weight(.medium))
                                 Text(option.detail(language: language, meaningLanguage: scan.study.meaningLanguage)).font(.caption).foregroundStyle(MuralColor.secondary)
@@ -447,7 +447,7 @@ struct ScanDetailView: View {
             Button { create(scan) } label: {
                 HStack {
                     Text(making ? "Writing your test…" : activity == .conversation ? "Save and set up the conversation" : "Make and save the test")
-                    Spacer(); if making { ProgressView() } else { Image(systemName: activity == .conversation ? "waveform" : "arrow.right") }
+                    Spacer(); if making { ProgressView().tint(MuralColor.onAccent) } else { Image(systemName: activity == .conversation ? "waveform" : "arrow.right") }
                 }.font(.headline).padding(18).foregroundStyle(MuralColor.onAccent).background(MuralColor.accent, in: Capsule())
             }.buttonStyle(.plain).disabled(making || (activity == .conversation && coordinator.isRunning)).accessibilityIdentifier("picture-start")
             if activity == .conversation && coordinator.isRunning {
@@ -458,7 +458,7 @@ struct ScanDetailView: View {
                  ? "Setting up a conversation sends nothing. The conversation itself uses your OpenAI account as usual."
                  : "Writing a test uses your OpenAI account once. Retaking it is free, except marking written answers that don’t match exactly.")
                 .font(.caption2).foregroundStyle(MuralColor.secondary)
-        }.padding(18).frame(maxWidth: .infinity, alignment: .leading).background(MuralColor.butter.opacity(0.7), in: RoundedRectangle(cornerRadius: 22))
+        }.padding(18).frame(maxWidth: .infinity, alignment: .leading).background(MuralColor.surface, in: RoundedRectangle(cornerRadius: 22))
     }
 
     private func label(_ text: String) -> some View {
@@ -526,11 +526,11 @@ struct PictureTestView: View {
                     if let error { Text(error).font(.footnote).foregroundStyle(MuralColor.secondary).accessibilityIdentifier("picture-test-error") }
                     if marked {
                         Button("Take it again", systemImage: "arrow.counterclockwise") { reset(practice) }
-                            .font(.headline).padding(18).frame(maxWidth: .infinity).background(MuralColor.peach, in: Capsule())
+                            .font(.headline).padding(18).frame(maxWidth: .infinity).foregroundStyle(MuralColor.onAccent).background(MuralColor.accent, in: Capsule())
                             .accessibilityIdentifier("picture-test-retake")
                     } else {
                         Button { check() } label: {
-                            HStack { Text(marking ? "Checking…" : "Check answers"); Spacer(); if marking { ProgressView() } else { Image(systemName: "checkmark") } }
+                            HStack { Text(marking ? "Checking…" : "Check answers"); Spacer(); if marking { ProgressView().tint(MuralColor.onAccent) } else { Image(systemName: "checkmark") } }
                                 .font(.headline).padding(18).foregroundStyle(MuralColor.onAccent).background(MuralColor.accent, in: Capsule())
                         }.buttonStyle(.plain).disabled(marking).accessibilityIdentifier("picture-test-check")
                     }
@@ -565,7 +565,7 @@ struct PictureTestView: View {
                     Spacer(minLength: 0)
                     Button { listen(question.passage) } label: {
                         Image(systemName: "speaker.wave.2").font(.title3).padding(12)
-                            .background(MuralColor.surface.opacity(0.8), in: Circle()).contentShape(Circle())
+                            .background(MuralColor.raised, in: Circle()).contentShape(Circle())
                     }.buttonStyle(.plain).accessibilityLabel("Listen").accessibilityIdentifier("picture-test-listen")
                 }
             }
@@ -578,26 +578,26 @@ struct PictureTestView: View {
                             Image(systemName: chosen ? "largecircle.fill.circle" : "circle")
                             Text(option).multilineTextAlignment(.leading)
                             Spacer(minLength: 0)
-                            if grade != nil && option == question.answer { Image(systemName: "checkmark").foregroundStyle(MuralColor.accent) }
+                            if grade != nil && option == question.answer { Image(systemName: "checkmark").foregroundStyle(MuralColor.ink) }
                         }.padding(.horizontal, 14).padding(.vertical, 11)
-                            .background(chosen ? MuralColor.peach : MuralColor.surface.opacity(0.75), in: RoundedRectangle(cornerRadius: 14))
+                            .background(chosen ? MuralColor.selected : MuralColor.raised, in: RoundedRectangle(cornerRadius: 14))
                             .contentShape(Rectangle())
                     }.buttonStyle(.plain).accessibilityAddTraits(chosen ? .isSelected : [])
                 }
             case .written:
                 TextField("Your answer", text: $responses[index], axis: .vertical)
-                    .padding(14).background(MuralColor.surface, in: RoundedRectangle(cornerRadius: 14)).disabled(grade != nil)
+                    .padding(14).background(MuralColor.raised, in: RoundedRectangle(cornerRadius: 14)).disabled(grade != nil)
             }
             if let grade {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(grade.verdict.title).font(.subheadline.weight(.semibold)).foregroundStyle(grade.verdict == .correct ? MuralColor.ink : MuralColor.accent)
+                    Text(grade.verdict.title).font(.subheadline.weight(.semibold)).foregroundStyle(MuralColor.ink)
                     if !grade.feedback.isEmpty { Text(grade.feedback).font(.subheadline) }
                     if grade.verdict != .correct && question.kind == .written { Text("One answer: \(question.answer)").font(.subheadline).textSelection(.enabled) }
                     if !question.explanation.isEmpty { Text(question.explanation).font(.caption).foregroundStyle(MuralColor.secondary) }
                 }
             }
         }.padding(18).frame(maxWidth: .infinity, alignment: .leading)
-            .background(MuralColor.panels[index % 4].opacity(0.8), in: RoundedRectangle(cornerRadius: 22))
+            .background(MuralColor.surface, in: RoundedRectangle(cornerRadius: 22))
     }
 
     private func listen(_ text: String) {

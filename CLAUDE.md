@@ -224,6 +224,17 @@ cut-out cards that sway in a GPU shader modifier, so detail costs triangles, not
 landmark, or with an ID the app does not know, shows the orb. Keep a new scene to a few hundred
 nodes' worth of simple geometry; this view is on screen for whole conversations.
 
+Every island is turf only (`Geometry.island`): a rounded slab of grass and its blades, with no
+rock or soil under it. Every scene shares one light, `Sunrise`: when the scene appears the sun
+climbs from a red dawn to a golden morning over six seconds and then holds, and the SwiftUI sky
+glow behind the island warms with it. Under Reduce Motion it starts risen. A new landmark gets
+both by building on `Geometry.island` and leaving the lights to `LandmarkView`.
+
+The interface is black and white with one red. Every card, row and chip is `MuralColor.surface`
+(controls inside a card are `raised`, a selected chip or option `selected`), and red
+`MuralColor.accent` is kept for the main action on a screen. Do not tint individual cards to
+vary them.
+
 The romaji comes from the system dictionary and **spells kana as written**. A small table in
 `Readings.swift` overrides the particles は, を, へ and the greetings こんにちは and こんばんは.
 What remains is a sounding-out aid, not a pronunciation guide: 私 transcribes as *watakushi*

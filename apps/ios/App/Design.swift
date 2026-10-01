@@ -1,29 +1,31 @@
 import SwiftUI
 
-/// Mural is black and white: a true black page, dark grey cards, white text, and white as the
-/// accent, with black text on it. Colour is left to the content, such as the landmarks. Names
-/// describe each colour's role, so `cream` is the page background and `ink` the text on it.
+/// Mural is black and white with one red: a true black page, one grey for every card, white text,
+/// and red kept for the main action on a screen, with white text on it. Other colour is left to
+/// the content, such as the landmarks. Names describe each colour's role, so `cream` is the page
+/// background and `ink` the text on it.
+///
+/// Greys step up by depth rather than vary by card: every card, row, chip and field on the page
+/// is `surface`, a control inside a card is `raised`, and only a selected chip or option is
+/// `selected`.
 enum MuralColor {
     static let cream = Color(red: 0, green: 0, blue: 0)
     static let ink = Color(red: 1, green: 1, blue: 1)
     static let secondary = Color(white: 0.6)
-    static let accent = Color(white: 0.96)
+    /// The main action on a screen, and nothing else. Deep enough for white text to read on it.
+    static let accent = Color(red: 0.85, green: 0.17, blue: 0.17)
     /// Text and icons on an accent button.
-    static let onAccent = Color(red: 0, green: 0, blue: 0)
-    /// Cards, fields and controls raised above the page.
-    static let surface = Color(white: 0.11)
-    /// The highlighted card or chip: a lighter grey that reads as selected beside plain cards.
-    static let peach = Color(white: 0.24)
-    static let lilac = Color(white: 0.125)
-    static let sage = Color(white: 0.115)
-    static let butter = Color(white: 0.135)
-    /// Icon colours, kept as a list so cards can still vary: white and soft greys.
-    static let icons = [Color(white: 1), Color(white: 0.85), Color(white: 0.92), Color(white: 0.78)]
+    static let onAccent = Color(red: 1, green: 1, blue: 1)
+    /// Every card, row, chip and field on the page, so no card stands out by colour alone.
+    static let surface = Color(white: 0.12)
+    /// A field or control inside a card, one step lighter so it still reads against the card.
+    static let raised = Color(white: 0.19)
+    /// The selected chip or option.
+    static let selected = Color(white: 0.27)
     /// The orb, the figure for a language without a landmark, glows in silver.
     static let glowButter = Color(white: 0.97)
     static let glowPeach = Color(white: 0.88)
     static let glowOrange = Color(white: 0.62)
-    static let panels = [peach, lilac, sage, butter]
 }
 
 extension View {
