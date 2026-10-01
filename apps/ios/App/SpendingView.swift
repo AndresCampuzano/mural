@@ -23,9 +23,8 @@ struct SpendingView: View {
     @State private var keyMessage: String?
 
     private static let monthsShown = 6
-    private static let palette: [Color] = [MuralColor.accent, Color(red: 0.52, green: 0.42, blue: 0.78),
-                                           Color(red: 0.36, green: 0.58, blue: 0.40), Color(red: 0.86, green: 0.66, blue: 0.18),
-                                           MuralColor.secondary]
+    /// Greys far enough apart to tell the models apart in a black and white interface.
+    private static let palette: [Color] = [MuralColor.accent, Color(white: 0.7), Color(white: 0.5), Color(white: 0.36), Color(white: 0.25)]
     private var calendar: Calendar { .current }
     private var firstMonth: Date {
         let now = calendar.dateInterval(of: .month, for: .now)?.start ?? .now

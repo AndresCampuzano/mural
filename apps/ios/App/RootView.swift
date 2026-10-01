@@ -207,10 +207,10 @@ struct TalkView: View {
                 else if !coordinator.isRunning { coordinator.start() }
             } label: {
                 ZStack {
-                    Circle().fill(LinearGradient(colors: [Color(red: 0.72, green: 0.6, blue: 1), MuralColor.accent], startPoint: .topLeading, endPoint: .bottomTrailing))
-                    if coordinator.state == .connecting || coordinator.state == .closing { ProgressView().tint(MuralColor.ink) }
+                    Circle().fill(LinearGradient(colors: [Color(white: 1), Color(white: 0.82)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                    if coordinator.state == .connecting || coordinator.state == .closing { ProgressView().tint(MuralColor.onAccent) }
                     else { Image(systemName: coordinator.isMuted && coordinator.state == .active ? "mic.slash" : "mic").font(.system(size: 28, weight: .regular)).contentTransition(.symbolEffect(.replace)) }
-                }.frame(width: 76, height: 76).shadow(color: MuralColor.accent.opacity(0.25), radius: 10, y: 6)
+                }.foregroundStyle(MuralColor.onAccent).frame(width: 76, height: 76).shadow(color: MuralColor.accent.opacity(0.18), radius: 10, y: 6)
             }.buttonStyle(.plain).padding(.bottom, 18)
                 .disabled(coordinator.state == .connecting || coordinator.state == .closing)
                 .accessibilityLabel(coordinator.state == .active ? (coordinator.isMuted ? "Unmute microphone" : "Mute microphone") : "Start conversation")

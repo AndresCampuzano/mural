@@ -694,3 +694,19 @@ lavender to pink with a paler top, and the maple deep red to orange to gold.
 - **143 core tests passed.** Both scenes and the Themes screen checked by screenshot on an
   iPhone 17 simulator; installed on the iPhone and iPad.
 - **Not measured:** the cost of HDR and bloom on a device's frame time or battery.
+
+## Black and white, a leaf icon, and landmarks without a box (1 October 2026)
+
+The interface is black and white: a true black page, grey cards, white text, a white accent with
+black text and icons on it (including the microphone), grey chart colours in Spending, and a
+silver fallback orb. Colour is left to the landmarks. The brand mark and the app icon are a leaf
+instead of the orb; the icon is a white leaf with black veins on black, drawn in code at 1024 px.
+
+The landmark used to render inside its layout slot, so swaying, bobbing and falling petals were
+cut at the slot's edges. The SceneKit canvas is now 1.7 times larger than the slot and transparent,
+with the field of view widened by the same factor so the scene keeps its apparent size; it draws
+at 2x to keep the pixel count near the old one, and ignores touches. The camera aims a little
+lower, so the island no longer reaches the status line.
+
+- **143 core tests passed.** Talk (both languages) and Themes checked by screenshot on an iPhone 17
+  simulator; installed on the iPhone and iPad.

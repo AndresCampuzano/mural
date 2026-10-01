@@ -19,7 +19,15 @@ struct LanguageFigure: View {
                     RadialGradient(colors: [(Landmarks.halo[id] ?? MuralColor.accent).opacity(0.26 + energy * 0.12), .clear],
                                    center: .center, startRadius: 2, endRadius: min(geometry.size.width, geometry.size.height) * 0.47)
                 }
-                LandmarkView(id: id, build: build, energy: energy, listening: listening, active: active)
+                // The scene renders on a transparent canvas larger than its slot, with the camera widened
+                // to match, so the island looks the same size but nothing it does, swaying, bobbing or
+                // shedding petals, ever meets the edge of the view.
+                GeometryReader { geometry in
+                    LandmarkView(id: id, build: build, energy: energy, listening: listening, active: active)
+                        .frame(width: geometry.size.width * LandmarkView.overscan, height: geometry.size.height * LandmarkView.overscan)
+                        .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
+                        .allowsHitTesting(false)
+                }
             }
             .id(id)
             .accessibilityIdentifier("landmark-\(id)")
@@ -38,8 +46,8 @@ enum Landmarks {
     ]
     /// The soft light behind each landmark, so the scene glows against the black page.
     static let halo: [String: Color] = [
-        "pavilion": Color(red: 0.86, green: 0.55, blue: 0.95),
-        "torii": Color(red: 1, green: 0.5, blue: 0.25)
+        "pavilion": Color(white: 0.75),
+        "torii": Color(white: 0.75)
     ]
 }
 
@@ -63,6 +71,14 @@ struct LandmarkView: UIViewRepresentable {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
 
+    /// How much larger than its slot the canvas is.
+    static let overscan: CGFloat = 1.7
+    /// The slot's field of view, widened by `overscan` so the scene keeps its apparent size.
+    static let fieldOfView: CGFloat = {
+        let slot: CGFloat = 30 * .pi / 180
+        return 2 * atan(tan(slot / 2) * overscan) * 180 / .pi
+    }()
+
     func makeCoordinator() -> Coordinator { Coordinator() }
 
     func makeUIView(context: Context) -> SCNView {
@@ -70,6 +86,9 @@ struct LandmarkView: UIViewRepresentable {
         view.backgroundColor = .clear
         view.antialiasingMode = .multisampling2X
         view.preferredFramesPerSecond = 30
+        // The canvas is larger than its slot, so draw it at 2x rather than the screen's 3x: about the
+        // same number of pixels as the slot alone at full resolution.
+        view.contentScaleFactor = 2
         view.isUserInteractionEnabled = false
         view.autoenablesDefaultLighting = false
         let scene = SCNScene()
@@ -90,7 +109,7 @@ struct LandmarkView: UIViewRepresentable {
         for (system, emitter) in landmark.particles { emitter.addParticleSystem(system); landmark.root.addChildNode(emitter) }
 
         let camera = SCNCamera()
-        camera.fieldOfView = 30
+        camera.fieldOfView = Self.fieldOfView
         // HDR with bloom makes lanterns, windows and lacquer highlights glow. The view is small and
         // runs at 30 fps, so the post-process pass stays cheap.
         camera.wantsHDR = true
@@ -105,7 +124,7 @@ struct LandmarkView: UIViewRepresentable {
         camera.zNear = 0.1; camera.zFar = 50
         let cameraNode = SCNNode(); cameraNode.camera = camera
         cameraNode.position = SCNVector3(0, 2.4, 7.6)
-        cameraNode.look(at: SCNVector3(0, 0.95, 0))
+        cameraNode.look(at: SCNVector3(0, 0.75, 0))
         scene.rootNode.addChildNode(cameraNode)
 
         // Three-point light: a warm key from the front left, a cool rim from behind that outlines the
