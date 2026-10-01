@@ -122,6 +122,24 @@ learner reads cannot be separated this way and needs a different strategy before
 registered. Meanings are fetched in one batched request, only when the learner saves or asks,
 so opening the list costs nothing.
 
+### Scans: read once, use often
+
+The **Scans** tab (`App/ScanViews.swift`, `Core/Scans.swift`, `Core/PictureStudy.swift`) takes a
+camera photo, a picture from Photos, or an image or PDF from Files, and sends it to
+`gpt-5.6-luna` **once**. What comes back is validated (`PictureStudy.validated` drops terms outside
+the module's `scriptRanges`) and kept as a `ScannedFile` in `Archive.scans`, with a thumbnail of at
+most 60 KB. The file itself is never stored. Everything later starts from the saved text:
+
+- A **conversation** practice keeps a level and pace and becomes a theme; setting it up sends nothing.
+- A **written test** keeps its questions, so retaking it sends nothing to build it. Swift marks
+  choices and exact answers; only other written answers go to the model, in one batch, and a
+  verdict list that does not line up marks nothing. Attempts are kept with the test.
+- Tests are practice, **not evidence**: `LearningEngine` never reads them.
+
+Scan and test costs go on a content-free `SessionRecord` (`SessionRecord.usageThemeID`), hidden
+from Past conversations, so deleting a scan removes everything read from it while Spending keeps
+the cost. `Archive.scans` is optional, so older backups decode.
+
 ## Security
 
 **Never put an API key in the repository.** Not in source, tests, fixtures, logs, scripts or

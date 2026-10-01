@@ -78,7 +78,7 @@ public struct PictureTerm: Codable, Hashable, Sendable {
 }
 
 /// What the learner wants to do with a picture.
-public enum PictureActivity: String, CaseIterable, Sendable, Identifiable {
+public enum PictureActivity: String, Codable, CaseIterable, Sendable, Identifiable {
     case conversation, writtenTest
     public var id: String { rawValue }
     public var title: String {
@@ -148,7 +148,7 @@ public struct PictureTest: Sendable {
     }
 }
 
-public struct TestQuestion: Identifiable, Sendable {
+public struct TestQuestion: Codable, Identifiable, Sendable {
     public enum Kind: String, Codable, Sendable { case choice, written }
     public var id = UUID()
     public var kind: Kind

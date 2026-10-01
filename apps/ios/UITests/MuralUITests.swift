@@ -390,15 +390,76 @@ final class MuralUITests: XCTestCase {
         let card = app.buttons["picture-card"]
         XCTAssertTrue(card.waitForExistence(timeout: 5))
         card.tap()
+        let newScan = app.buttons["scan-new"]
+        XCTAssertTrue(newScan.waitForExistence(timeout: 5))
+        newScan.tap()
         XCTAssertTrue(app.buttons["picture-photos"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["picture-files"].exists)
-        // Nothing is read until a picture is chosen, so there is nothing to practise yet.
+        // Nothing is read until a picture is chosen.
         XCTAssertFalse(app.buttons["picture-read"].exists)
-        XCTAssertFalse(app.buttons["picture-start"].exists)
         let screen = XCTAttachment(screenshot: app.screenshot())
-        screen.name = "Picture study"; screen.lifetime = .keepAlways; add(screen)
+        screen.name = "New scan"; screen.lifetime = .keepAlways; add(screen)
         app.buttons["Close"].tap()
-        XCTAssertTrue(card.waitForExistence(timeout: 5))
+        XCTAssertTrue(newScan.waitForExistence(timeout: 5))
+    }
+
+    func testASavedScanIsRetakenRenamedAndDeleted() {
+        let app = XCUIApplication(); app.launchArguments = ["--preview", "--preview-scan"]; app.launch()
+        app.tabBars.buttons["Scans"].tap()
+        let row = app.buttons["scan-row"]
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        row.tap()
+        XCTAssertTrue(app.staticTexts["scan-name"].waitForExistence(timeout: 5))
+        // Pace is how fast Mural speaks, so a written test does not offer it.
+        let activity = app.segmentedControls["picture-activity"]
+        for _ in 0..<6 where !activity.isHittable { app.swipeUp() }
+        XCTAssertTrue(app.segmentedControls["picture-pace"].exists)
+        activity.buttons.element(boundBy: 1).tap()
+        XCTAssertFalse(app.segmentedControls["picture-pace"].exists)
+        activity.buttons.element(boundBy: 0).tap()
+        XCTAssertTrue(app.segmentedControls["picture-pace"].waitForExistence(timeout: 2))
+        let screen = XCTAttachment(screenshot: app.screenshot())
+        screen.name = "Scan detail"; screen.lifetime = .keepAlways; add(screen)
+
+        // The saved test is taken twice without writing it again.
+        let test = app.buttons["practice-writtenTest"]
+        for _ in 0..<6 where !test.isHittable { app.swipeDown() }
+        test.tap()
+        for attempt in 1...2 {
+            let hello = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "hello")).firstMatch
+            XCTAssertTrue(hello.waitForExistence(timeout: 5))
+            hello.tap()
+            let check = app.buttons["picture-test-check"]
+            for _ in 0..<6 where !check.isHittable { app.swipeUp() }
+            check.tap()
+            XCTAssertTrue(app.staticTexts["picture-test-score"].waitForExistence(timeout: 5))
+            let retake = app.buttons["picture-test-retake"]
+            for _ in 0..<6 where !retake.isHittable { app.swipeUp() }
+            if attempt == 1 { retake.tap(); for _ in 0..<6 where !hello.isHittable { app.swipeDown() } }
+        }
+        let result = XCTAttachment(screenshot: app.screenshot())
+        result.name = "Test marked"; result.lifetime = .keepAlways; add(result)
+        app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "taken 2 times")).firstMatch.waitForExistence(timeout: 5))
+
+        // Rename, then delete from the list.
+        app.buttons["Scan options"].tap()
+        app.buttons["Rename"].tap()
+        // An alert's text field does not carry its identifier, so it is found inside the alert.
+        let field = app.alerts["Rename"].textFields.firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        XCTAssertEqual(field.value as? String, "Café menu", "the current name is offered for editing")
+        field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 20) + "Lunch")
+        app.alerts.buttons["Save"].tap()
+        XCTAssertTrue(app.staticTexts["Lunch"].waitForExistence(timeout: 5))
+        app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertTrue(app.staticTexts["Lunch"].waitForExistence(timeout: 5))
+        app.buttons["More for Lunch"].tap()
+        app.buttons["Delete"].tap()
+        app.buttons["Delete scan"].tap()
+        let gone = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: app.buttons["scan-row"])
+        XCTAssertEqual(XCTWaiter().wait(for: [gone], timeout: 5), .completed)
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "scans will appear here")).firstMatch.exists)
     }
 
     func testLanguageSwitchUpdatesGreetingAndThemes() {

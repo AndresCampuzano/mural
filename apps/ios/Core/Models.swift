@@ -195,8 +195,12 @@ public struct Archive: Codable, Sendable {
     public var preferences = Preferences()
     /// Optional so a backup written before the saved list existed still decodes.
     public var savedPhrases: [SavedPhrase]?
+    /// Pictures and PDFs read once and kept as text. Optional so older backups still decode.
+    public var scans: [ScannedFile]?
     public init() {}
     public var phrases: [SavedPhrase] { savedPhrases ?? [] }
+    public var scannedFiles: [ScannedFile] { scans ?? [] }
+    public static let maximumScans = 300
     public static func decode(_ data: Data) throws -> Archive {
         guard data.count <= maximumEncodedBytes else { throw ArchiveError.tooLarge }
         let migrated = try migrate(data)
@@ -230,6 +234,10 @@ public struct Archive: Codable, Sendable {
         let newPhrases = incoming.phrases.filter { !keptPhrases.contains($0.key) }
         guard newPhrases.count <= Self.maximumSavedPhrases - phrases.count else { throw ArchiveError.tooLarge }
         if !newPhrases.isEmpty { candidate.savedPhrases = candidate.phrases + newPhrases }
+        let knownScans = Set(scannedFiles.map(\.id))
+        let newScans = incoming.scannedFiles.filter { !knownScans.contains($0.id) }
+        guard newScans.count <= Self.maximumScans - scannedFiles.count else { throw ArchiveError.tooLarge }
+        if !newScans.isEmpty { candidate.scans = candidate.scannedFiles + newScans }
         for var session in additions {
             session.invalidateChangedAssessments()
             session.assessments = session.assessments.compactMap { LearningEngine.validate($0, session: session) }
@@ -253,6 +261,11 @@ public struct Archive: Codable, Sendable {
             guard !phrase.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                   phrase.text.count <= SavedPhrase.maximumLength, phrase.meaning.count <= 300,
                   phrase.source.count <= 500, validDate(phrase.savedAt) else { throw ArchiveError.invalid }
+        }
+        guard scannedFiles.count <= Self.maximumScans, Set(scannedFiles.map(\.id)).count == scannedFiles.count else { throw ArchiveError.invalid }
+        for scan in scannedFiles {
+            guard LanguageRegistry.module(for: scan.languageID) != nil else { throw ArchiveError.unsupportedLanguage }
+            guard scan.isValid(validDate: validDate) else { throw ArchiveError.invalid }
         }
         for s in sessions {
             guard LanguageRegistry.module(for: s.languageID) != nil else { throw ArchiveError.unsupportedLanguage }

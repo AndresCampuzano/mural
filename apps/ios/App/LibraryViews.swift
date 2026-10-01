@@ -5,10 +5,10 @@ import MuralCore
 struct ThemesView: View {
     let coordinator: ConversationCoordinator
     let choose: (ConversationTheme?) -> Void
+    var openScans: () -> Void = {}
     @State private var search = ""
     @State private var category = "All"
     @State private var current = false
-    @State private var picture = false
     @Environment(\.dynamicTypeSize) private var typeSize
     private var themes: [ConversationTheme] {
         coordinator.language.themes.filter { (category == "All" || $0.category == category) && (search.isEmpty || $0.title.localizedCaseInsensitiveContains(search) || $0.category.localizedCaseInsensitiveContains(search)) }
@@ -25,7 +25,7 @@ struct ThemesView: View {
                 if let course = coordinator.language.course {
                     CourseCard(course: course, language: coordinator.language) { choose($0) }
                 }
-                PictureCard { picture = true }
+                PictureCard(open: openScans)
                 ScrollView(.horizontal) {
                     HStack(spacing: 8) {
                         ForEach(categories, id: \.self) { c in
@@ -54,12 +54,6 @@ struct ThemesView: View {
         }.foregroundStyle(MuralColor.ink)
             .searchable(text: $search, prompt: "Find a conversation")
             .sheet(isPresented: $current) { CurrentTopicView(coordinator: coordinator) { choose(coordinator.selectedTheme) } }
-            .sheet(isPresented: $picture) {
-                // The theme is chosen first, because choosing one clears a practice's own level and pace.
-                PictureStudyView(coordinator: coordinator) { study, level, pace in
-                    choose(study.theme(language: coordinator.language)); coordinator.practice(study, level: level, pace: pace)
-                }
-            }
     }
 }
 
@@ -142,14 +136,16 @@ struct TranscriptView: View {
 
 struct SessionHistoryView: View {
     let store: LearningStore
+    /// Usage-only records carry the cost of scans and tests, not a conversation.
+    private var conversations: [SessionRecord] { store.learningSessions.filter { !$0.isUsageOnly } }
     @State private var selected: SessionRecord?
     @State private var deleting: SessionRecord?
     @Environment(\.dismiss) private var dismiss
     var body: some View {
         NavigationStack {
             List {
-                if store.learningSessions.isEmpty { Text("Your \(store.language.name) conversations will appear here.").foregroundStyle(MuralColor.secondary) }
-                ForEach(store.learningSessions) { session in
+                if conversations.isEmpty { Text("Your \(store.language.name) conversations will appear here.").foregroundStyle(MuralColor.secondary) }
+                ForEach(conversations) { session in
                     Button { selected = session } label: {
                         VStack(alignment: .leading, spacing: 6) {
                             Text(session.title).font(.headline)
@@ -339,7 +335,7 @@ struct SettingsView: View {
         }
         .confirmationDialog("Delete all learning data on this phone?", isPresented: $deleting, titleVisibility: .visible) {
             Button("Delete all learning data", role: .destructive) { coordinator.deleteLearningData() }
-        } message: { Text("This removes conversations, vocabulary, saved phrases and progress. Export a backup first if you want to keep them. Your API key and preferences remain.") }
+        } message: { Text("This removes conversations, vocabulary, saved phrases, scans and progress. Export a backup first if you want to keep them. Your API key and preferences remain.") }
         .sheet(isPresented: $sessions) { SessionHistoryView(store: store) }
         .sheet(isPresented: $notices) {
             NavigationStack {

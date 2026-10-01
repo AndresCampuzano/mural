@@ -607,47 +607,66 @@ import MuralCore
     }
     // MARK: Pictures and PDFs
 
-    /// Reads a picture or PDF into something to teach from. The file is sent to OpenAI for this
-    /// request only and never stored; the cost is kept on a session so Spending counts it.
-    func readPicture(_ attachment: APIAttachment) async throws -> PictureStudy {
+    /// Reads a picture or PDF once and keeps what was read, so every later conversation or test
+    /// is built from the saved text. The file goes to OpenAI for this request only and is never
+    /// stored; a content-free usage record keeps the cost for Spending.
+    func scan(_ attachment: APIAttachment, kind: ScannedFile.Kind, detail: String, thumbnail: Data?) async throws -> ScannedFile {
         guard hasAIConsent else { throw AIProcessingConsent.ConsentError.required }
         let targetLanguage = language, meaningLanguage = store.preferences.meaningLanguage, generation = languageGeneration
         let result = try await api.respond(instructions: TeachingPolicy.pictureReading(language: targetLanguage, meaningLanguage: meaningLanguage),
                                            input: "The picture to study is attached.", schema: APIClient.pictureStudySchema(), attachments: [attachment])
+        var usage = SessionRecord(languageID: targetLanguage.id, themeID: SessionRecord.usageThemeID, title: "Scan"); usage.endedAt = .now
+        usage.inputTokens = result.usage.input; usage.outputTokens = result.usage.output
+        store.save(usage)
         guard generation == languageGeneration else { throw CancellationError() }
         guard let data = result.text.data(using: .utf8) else { throw APIClient.APIError.invalidResponse }
         let study = PictureStudy.validated(try JSONDecoder().decode(PictureStudy.Reply.self, from: data), language: targetLanguage, meaningLanguage: meaningLanguage)
-        var record = SessionRecord(languageID: targetLanguage.id, themeID: "picture", title: study.title); record.endedAt = .now
-        record.topics = [TopicBrief(languageID: targetLanguage.id, query: study.title, text: study.summary, sources: [])]
-        record.inputTokens = result.usage.input; record.outputTokens = result.usage.output
-        store.save(record); pictureRecords[study.id] = record.id
-        return study
+        guard study.isUsable else { throw PictureError.nothingToLearn }
+        let file = ScannedFile(languageID: targetLanguage.id, name: study.title, kind: kind, detail: detail, study: study,
+                               thumbnail: thumbnail, usageSessionID: usage.id)
+        store.saveScan(file)
+        return file
     }
-    func makeTest(from study: PictureStudy, level: GuidanceLevel) async throws -> PictureTest {
+    /// Writes a new test from the saved scan and keeps it, so it can be retaken without asking again.
+    func makeTest(scanID: UUID, level: GuidanceLevel) async throws -> SavedPractice {
         guard hasAIConsent else { throw AIProcessingConsent.ConsentError.required }
-        guard let targetLanguage = LanguageRegistry.module(for: study.languageID) else { throw ArchiveError.unsupportedLanguage }
-        let result = try await api.respond(instructions: TeachingPolicy.pictureTest(study, language: targetLanguage, level: level),
-                                           input: TeachingPolicy.pictureTestInput(study), schema: APIClient.pictureTestSchema(), maxOutputTokens: 3500)
-        addPictureUsage(result.usage, to: study)
+        guard let file = store.scan(scanID), let targetLanguage = LanguageRegistry.module(for: file.languageID) else { throw PictureError.missing }
+        let result = try await api.respond(instructions: TeachingPolicy.pictureTest(file.study, language: targetLanguage, level: level),
+                                           input: TeachingPolicy.pictureTestInput(file.study), schema: APIClient.pictureTestSchema(), maxOutputTokens: 3500)
+        addScanUsage(result.usage, to: file)
         guard let data = result.text.data(using: .utf8) else { throw APIClient.APIError.invalidResponse }
         let test = PictureTest.validated(try JSONDecoder().decode(PictureTest.Reply.self, from: data), level: level)
         guard !test.questions.isEmpty else { throw PictureError.noQuestions }
-        return test
+        guard let current = store.scan(scanID) else { throw PictureError.missing }
+        let practice = SavedPractice(name: current.suggestedName(for: .writtenTest, level: level), activity: .writtenTest, level: level, questions: test.questions)
+        store.updateScan(scanID) { $0.add(practice) }
+        return practice
+    }
+    /// Keeps a conversation about the scan at its own level and pace. Nothing is sent to set it up.
+    @discardableResult func saveConversation(scanID: UUID, level: GuidanceLevel, pace: SpeechPace) -> SavedPractice? {
+        guard let file = store.scan(scanID) else { return nil }
+        let practice = SavedPractice(name: file.suggestedName(for: .conversation, level: level), activity: .conversation, level: level, pace: pace)
+        store.updateScan(scanID) { $0.add(practice) }
+        return practice
     }
     /// Swift marks choices and exact answers itself; only the written answers it cannot decide
-    /// go to the model, in one request.
-    func grade(_ test: PictureTest, responses: [String], study: PictureStudy) async throws -> [GradedAnswer?] {
+    /// go to the model, in one request. The attempt is kept with the test.
+    func grade(scanID: UUID, practiceID: UUID, responses: [String]) async throws -> [GradedAnswer?] {
+        guard let file = store.scan(scanID), let practice = file.practice(id: practiceID),
+              let targetLanguage = LanguageRegistry.module(for: file.languageID) else { throw PictureError.missing }
+        let test = practice.test
         var grades = zip(test.questions, responses).map { TestGrader.local($0, response: $1) }
         let asked = grades.indices.filter { grades[$0] == nil }
-        guard !asked.isEmpty else { return grades }
-        guard hasAIConsent else { throw AIProcessingConsent.ConsentError.required }
-        guard let targetLanguage = LanguageRegistry.module(for: study.languageID) else { throw ArchiveError.unsupportedLanguage }
-        let result = try await api.respond(instructions: TeachingPolicy.pictureGrading(language: targetLanguage, meaningLanguage: study.meaningLanguage),
-                                           input: TeachingPolicy.pictureGradingInput(test, responses: responses, asked: asked), schema: APIClient.pictureGradingSchema())
-        addPictureUsage(result.usage, to: study)
-        guard let data = result.text.data(using: .utf8) else { throw APIClient.APIError.invalidResponse }
-        grades = TestGrader.merge(try JSONDecoder().decode(TestGrader.Reply.self, from: data), into: grades, asked: asked)
-        guard grades.allSatisfy({ $0 != nil }) else { throw PictureError.unmarked }
+        if !asked.isEmpty {
+            guard hasAIConsent else { throw AIProcessingConsent.ConsentError.required }
+            let result = try await api.respond(instructions: TeachingPolicy.pictureGrading(language: targetLanguage, meaningLanguage: file.study.meaningLanguage),
+                                               input: TeachingPolicy.pictureGradingInput(test, responses: responses, asked: asked), schema: APIClient.pictureGradingSchema())
+            addScanUsage(result.usage, to: file)
+            guard let data = result.text.data(using: .utf8) else { throw APIClient.APIError.invalidResponse }
+            grades = TestGrader.merge(try JSONDecoder().decode(TestGrader.Reply.self, from: data), into: grades, asked: asked)
+            guard grades.allSatisfy({ $0 != nil }) else { throw PictureError.unmarked }
+        }
+        store.updateScan(scanID) { $0.recordAttempt(TestAttempt(score: TestGrader.score(grades), total: test.questions.count), practiceID: practiceID) }
         return grades
     }
     /// Sets up a conversation about the picture at the level and pace chosen for it. Like any
@@ -668,16 +687,17 @@ import MuralCore
         }
         return added.count
     }
-    private var pictureRecords: [UUID: UUID] = [:]
-    private func addPictureUsage(_ usage: APIUsage, to study: PictureStudy) {
-        guard let id = pictureRecords[study.id], var record = store.sessions.first(where: { $0.id == id }) else { return }
+    private func addScanUsage(_ usage: APIUsage, to file: ScannedFile) {
+        guard let id = file.usageSessionID, var record = store.sessions.first(where: { $0.id == id }) else { return }
         record.inputTokens += usage.input; record.outputTokens += usage.output
         store.save(record)
     }
     enum PictureError: LocalizedError {
-        case noQuestions, unmarked
+        case noQuestions, unmarked, nothingToLearn, missing
         var errorDescription: String? {
             switch self {
+            case .nothingToLearn: "Mural didn’t find anything to learn from in this one. Try a clearer picture."
+            case .missing: "That scan is no longer here."
             case .noQuestions: "Mural couldn’t write a fair test from this picture. Try again or pick a clearer one."
             case .unmarked: "Some answers couldn’t be marked. Please try again."
             }
