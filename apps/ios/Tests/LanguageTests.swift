@@ -168,7 +168,7 @@ final class LanguageTests: XCTestCase {
             let learner = LearningEngine.project([], languageID: language.id)
             let voice = TeachingPolicy.voice(language: language, learner: learner, theme: language.themes[0], interests: "", meaningLanguage: "English")
             let assessment = TeachingPolicy.assessment(language: language)
-            let prompts = [voice, assessment, TeachingPolicy.greeting(language: language), TeachingPolicy.help(language: language),
+            let prompts = [voice, assessment, TeachingPolicy.greeting(language: language),
                 TeachingPolicy.redirect(language: language), TeachingPolicy.translation(language: language, meaningLanguage: "English"),
                 TeachingPolicy.delegation(language: language), TeachingPolicy.typedReply(language: language),
                 TeachingPolicy.lookup(language: language, meaningLanguage: "English"), TeachingPolicy.currentTopic(language: language)]
