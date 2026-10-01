@@ -39,7 +39,7 @@ struct ThemesView: View {
                     ForEach(themes) { theme in
                         Button { if theme.id == "today" { current = true } else { choose(theme) } } label: {
                             VStack(alignment: .leading, spacing: 28) {
-                                Image(systemName: theme.symbol).font(.system(size: 28, weight: .light)).foregroundStyle(MuralColor.secondary)
+                                Image(systemName: theme.symbol).font(.system(size: 28, weight: .regular)).foregroundStyle(MuralColor.icons[theme.colorIndex % MuralColor.icons.count])
                                 VStack(alignment: .leading, spacing: 5) {
                                     Text(theme.title).font(.system(.headline, design: .rounded))
                                     Text(theme.subtitle).font(.caption).foregroundStyle(MuralColor.secondary)
@@ -79,7 +79,7 @@ struct CurrentTopicView: View {
                         Text(.init(brief.text)).font(.body).textSelection(.enabled)
                         SourcesView(sources: brief.sources, date: brief.retrievedAt)
                         Button("Talk about this", systemImage: "waveform") { coordinator.discuss(brief); selected(); dismiss() }
-                            .font(.headline).padding(18).frame(maxWidth: .infinity).foregroundStyle(MuralColor.onAccent).background(MuralColor.orange, in: Capsule())
+                            .font(.headline).padding(18).frame(maxWidth: .infinity).foregroundStyle(MuralColor.onAccent).background(MuralColor.accent, in: Capsule())
                     }
                     Text("Search uses your OpenAI API account. Sources stay attached to the topic.").font(.footnote).foregroundStyle(MuralColor.secondary)
                 }.padding(26)

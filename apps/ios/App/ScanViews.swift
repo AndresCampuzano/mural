@@ -11,7 +11,7 @@ struct PictureCard: View {
     var body: some View {
         Button(action: open) {
             HStack(spacing: 16) {
-                Image(systemName: "text.viewfinder").font(.system(size: 26, weight: .light)).foregroundStyle(MuralColor.secondary)
+                Image(systemName: "text.viewfinder").font(.system(size: 26, weight: .regular)).foregroundStyle(MuralColor.icons[1])
                 VStack(alignment: .leading, spacing: 4) {
                     Text("From a picture or PDF").font(.system(.headline, design: .rounded))
                     Text("Scan a page, a menu or a sign once, then talk about it or take tests as often as you like.")
@@ -228,7 +228,7 @@ struct NewScanView: View {
             Text(picture.detail).font(.caption).foregroundStyle(MuralColor.secondary)
             Button { read(picture) } label: {
                 HStack { Text(loading ? "Reading…" : "Read and keep it"); Spacer(); if loading { ProgressView() } else { Image(systemName: "text.viewfinder") } }
-                    .font(.headline).padding(18).foregroundStyle(MuralColor.onAccent).background(MuralColor.orange, in: Capsule())
+                    .font(.headline).padding(18).foregroundStyle(MuralColor.onAccent).background(MuralColor.accent, in: Capsule())
             }.buttonStyle(.plain).disabled(loading).accessibilityIdentifier("picture-read")
         }
     }
@@ -425,7 +425,7 @@ struct ScanDetailView: View {
                 ForEach(GuidanceLevel.allCases) { option in
                     Button { level = option } label: {
                         HStack(alignment: .top, spacing: 12) {
-                            Image(systemName: level == option ? "largecircle.fill.circle" : "circle").foregroundStyle(level == option ? MuralColor.orange : MuralColor.secondary)
+                            Image(systemName: level == option ? "largecircle.fill.circle" : "circle").foregroundStyle(level == option ? MuralColor.accent : MuralColor.secondary)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(option.title).font(.subheadline.weight(.medium))
                                 Text(option.detail(language: language, meaningLanguage: scan.study.meaningLanguage)).font(.caption).foregroundStyle(MuralColor.secondary)
@@ -448,7 +448,7 @@ struct ScanDetailView: View {
                 HStack {
                     Text(making ? "Writing your test…" : activity == .conversation ? "Save and set up the conversation" : "Make and save the test")
                     Spacer(); if making { ProgressView() } else { Image(systemName: activity == .conversation ? "waveform" : "arrow.right") }
-                }.font(.headline).padding(18).foregroundStyle(MuralColor.onAccent).background(MuralColor.orange, in: Capsule())
+                }.font(.headline).padding(18).foregroundStyle(MuralColor.onAccent).background(MuralColor.accent, in: Capsule())
             }.buttonStyle(.plain).disabled(making || (activity == .conversation && coordinator.isRunning)).accessibilityIdentifier("picture-start")
             if activity == .conversation && coordinator.isRunning {
                 Text("End the current conversation first.").font(.caption).foregroundStyle(MuralColor.secondary)
@@ -531,7 +531,7 @@ struct PictureTestView: View {
                     } else {
                         Button { check() } label: {
                             HStack { Text(marking ? "Checking…" : "Check answers"); Spacer(); if marking { ProgressView() } else { Image(systemName: "checkmark") } }
-                                .font(.headline).padding(18).foregroundStyle(MuralColor.onAccent).background(MuralColor.orange, in: Capsule())
+                                .font(.headline).padding(18).foregroundStyle(MuralColor.onAccent).background(MuralColor.accent, in: Capsule())
                         }.buttonStyle(.plain).disabled(marking).accessibilityIdentifier("picture-test-check")
                     }
                     Text("This test is practice. It doesn’t change your recall bars: those are earned by using words in conversation.")
@@ -578,7 +578,7 @@ struct PictureTestView: View {
                             Image(systemName: chosen ? "largecircle.fill.circle" : "circle")
                             Text(option).multilineTextAlignment(.leading)
                             Spacer(minLength: 0)
-                            if grade != nil && option == question.answer { Image(systemName: "checkmark").foregroundStyle(MuralColor.orange) }
+                            if grade != nil && option == question.answer { Image(systemName: "checkmark").foregroundStyle(MuralColor.accent) }
                         }.padding(.horizontal, 14).padding(.vertical, 11)
                             .background(chosen ? MuralColor.peach : MuralColor.surface.opacity(0.75), in: RoundedRectangle(cornerRadius: 14))
                             .contentShape(Rectangle())
@@ -590,7 +590,7 @@ struct PictureTestView: View {
             }
             if let grade {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(grade.verdict.title).font(.subheadline.weight(.semibold)).foregroundStyle(grade.verdict == .correct ? MuralColor.ink : MuralColor.orange)
+                    Text(grade.verdict.title).font(.subheadline.weight(.semibold)).foregroundStyle(grade.verdict == .correct ? MuralColor.ink : MuralColor.accent)
                     if !grade.feedback.isEmpty { Text(grade.feedback).font(.subheadline) }
                     if grade.verdict != .correct && question.kind == .written { Text("One answer: \(question.answer)").font(.subheadline).textSelection(.enabled) }
                     if !question.explanation.isEmpty { Text(question.explanation).font(.caption).foregroundStyle(MuralColor.secondary) }

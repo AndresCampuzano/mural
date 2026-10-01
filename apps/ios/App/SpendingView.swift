@@ -23,7 +23,7 @@ struct SpendingView: View {
     @State private var keyMessage: String?
 
     private static let monthsShown = 6
-    private static let palette: [Color] = [MuralColor.orange, Color(red: 0.52, green: 0.42, blue: 0.78),
+    private static let palette: [Color] = [MuralColor.accent, Color(red: 0.52, green: 0.42, blue: 0.78),
                                            Color(red: 0.36, green: 0.58, blue: 0.40), Color(red: 0.86, green: 0.66, blue: 0.18),
                                            MuralColor.secondary]
     private var calendar: Calendar { .current }
@@ -169,7 +169,7 @@ struct SpendingView: View {
             Button { Task { await load() } } label: { Image(systemName: "arrow.clockwise").padding(8).contentShape(Rectangle()) }
                 .disabled(loading).accessibilityLabel("Refresh billed costs")
         }.overlay(alignment: .bottomLeading) {
-            if let error { Text(error).font(.footnote).foregroundStyle(MuralColor.orange).offset(y: 28) }
+            if let error { Text(error).font(.footnote).foregroundStyle(MuralColor.accent).offset(y: 28) }
         }.padding(.bottom, error == nil ? 0 : 28)
     }
 
@@ -219,7 +219,7 @@ struct SpendingView: View {
                     Task { await load() }
                 } catch { keyMessage = error.localizedDescription }
             }.disabled(adminKey.isEmpty).font(.headline).padding(.vertical, 12).padding(.horizontal, 18)
-                .foregroundStyle(MuralColor.onAccent).background(MuralColor.orange, in: Capsule()).contentShape(Capsule())
+                .foregroundStyle(MuralColor.onAccent).background(MuralColor.accent, in: Capsule()).contentShape(Capsule())
                 .accessibilityIdentifier("save-admin-key")
             if let keyMessage { Text(keyMessage).font(.footnote).foregroundStyle(MuralColor.secondary) }
         }

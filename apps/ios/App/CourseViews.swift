@@ -9,7 +9,7 @@ struct CourseCard: View {
     var body: some View {
         NavigationLink { CourseView(course: course, language: language, choose: choose) } label: {
             HStack(spacing: 16) {
-                Image(systemName: "books.vertical").font(.system(size: 26, weight: .light)).foregroundStyle(MuralColor.secondary)
+                Image(systemName: "books.vertical").font(.system(size: 26, weight: .regular)).foregroundStyle(MuralColor.icons[3])
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Your course").font(.system(.caption, design: .rounded, weight: .medium)).foregroundStyle(MuralColor.secondary)
                     Text(course.title).font(.system(.headline, design: .rounded)).multilineTextAlignment(.leading)
