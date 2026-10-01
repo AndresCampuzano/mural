@@ -645,3 +645,18 @@ orb on the dark page colour; only background pixels reachable from a corner were
 - **142 core tests passed. Full native UI suite passed (26 tests)** on an iPhone 17 simulator.
 - Talk and Themes screens checked by screenshot in the simulator.
 - Installed on the physical iPhone 15 Pro Max and iPad Pro 11-inch.
+
+## Language landmarks instead of the orb (30 September 2026)
+
+The Talk screen floats a 3D landmark for the selected language instead of the orb: a hexagonal
+pavilion with red pillars, a green painted band and a curved tiled roof beside a weeping cherry
+shedding petals (`pavilion`), and a vermilion torii with a stone lantern beside a three-tiered
+pagoda and a maple dropping leaves (`torii`). Each stands on a floating island that bobs and
+sways; it breathes with Mural's voice and drifts more petals while speaking. Scenes are
+procedural SceneKit geometry at 30 fps, without shadows, paused in the background, while closing
+and under Reduce Motion. A module without a known `landmarkID` shows the orb.
+
+- **143 core tests passed**, including a new check that every module names its own landmark.
+- Both scenes checked by screenshot on an iPhone 17 simulator.
+- **Not measured:** frame time, battery or thermal cost on a device. The scene is small by design,
+  but no profiling was run.

@@ -29,6 +29,9 @@ public struct LanguageModule: Identifiable, Sendable {
     public var scriptRanges: [ClosedRange<UInt32>] = []
     /// A textbook syllabus to practise by unit. `nil` hides the course entirely.
     public var course: Course? = nil
+    /// The 3D landmark the Talk screen floats for this language, by its ID in the app's
+    /// `Landmarks` registry. `nil`, or an ID the app does not know, shows the orb instead.
+    public var landmarkID: String? = nil
 
     public var themes: [ConversationTheme] {
         ConversationTheme.shared.map { themeOverrides[$0.id] ?? $0 }
