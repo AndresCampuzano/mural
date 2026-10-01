@@ -215,6 +215,13 @@ Two fields carry everything script-specific:
 - `readingAidName` — label for the optional Latin reading under target text. Japanese uses
   `romaji`; Korean sets `nil` because Hangul sounds out letter by letter.
 
+A third field is visual: `landmarkID` names the 3D scene the Talk screen floats instead of the
+orb (`App/Landmarks.swift`: a hexagonal pavilion beside a weeping cherry, and a torii beside a
+small pagoda). Scenes are procedural SceneKit geometry, no model files: flat-shaded, no shadows,
+30 fps, and paused in the background, while closing and under Reduce Motion. A module without a
+landmark, or with an ID the app does not know, shows the orb. Keep a new scene to a few hundred
+nodes' worth of simple geometry; this view is on screen for whole conversations.
+
 The romaji comes from the system dictionary and **spells kana as written**. A small table in
 `Readings.swift` overrides the particles は, を, へ and the greetings こんにちは and こんばんは.
 What remains is a sounding-out aid, not a pronunciation guide: 私 transcribes as *watakushi*

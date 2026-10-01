@@ -234,3 +234,14 @@ final class LanguageTests: XCTestCase {
         }
     }
 }
+
+/// Each module floats its own landmark on the Talk screen, named by ID so the app decides how to
+/// draw it and an unknown ID falls back to the orb.
+final class LandmarkTests: XCTestCase {
+    func testEveryModuleDeclaresItsOwnLandmark() {
+        let ids = LanguageRegistry.all.compactMap(\.landmarkID)
+        XCTAssertEqual(ids.count, LanguageRegistry.all.count, "every registered module names a landmark")
+        XCTAssertEqual(Set(ids).count, ids.count, "no two modules share a landmark")
+        XCTAssertTrue(ids.allSatisfy { !$0.isEmpty && $0 == $0.lowercased() && !$0.contains(" ") })
+    }
+}

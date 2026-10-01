@@ -27,6 +27,7 @@ extension LanguageModule {
         ],
         // Hangul syllables and jamo, including the compatibility and extended blocks.
         scriptRanges: [0x1100...0x11FF, 0x3130...0x318F, 0xA960...0xA97F, 0xAC00...0xD7A3, 0xD7B0...0xD7FF],
-        course: .seoulNationalKorean1
+        course: .seoulNationalKorean1,
+        landmarkID: "pavilion"
     )
 }
