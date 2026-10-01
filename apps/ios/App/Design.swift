@@ -1,32 +1,28 @@
 import SwiftUI
 
-/// Mural is always dark. Names describe each colour's role rather than its hue, so `cream` is the
-/// page background and `ink` the text on it.
-/// Mural is always dark, after the near-black, card-based look the learner chose: a true black
-/// page, dark grey cards, white text, a violet accent and bright icon colours. Names describe each
-/// colour's role, so `cream` is the page background and `ink` the text on it.
+/// Mural is black and white: a true black page, dark grey cards, white text, and white as the
+/// accent, with black text on it. Colour is left to the content, such as the landmarks. Names
+/// describe each colour's role, so `cream` is the page background and `ink` the text on it.
 enum MuralColor {
     static let cream = Color(red: 0, green: 0, blue: 0)
     static let ink = Color(red: 1, green: 1, blue: 1)
-    static let secondary = Color(red: 0.6, green: 0.6, blue: 0.635)
-    static let accent = Color(red: 0.55, green: 0.39, blue: 0.95)
-    /// Text on an accent button.
-    static let onAccent = Color(red: 1, green: 1, blue: 1)
+    static let secondary = Color(white: 0.6)
+    static let accent = Color(white: 0.96)
+    /// Text and icons on an accent button.
+    static let onAccent = Color(red: 0, green: 0, blue: 0)
     /// Cards, fields and controls raised above the page.
-    static let surface = Color(red: 0.11, green: 0.11, blue: 0.118)
-    /// The highlighted card or chip: a dark violet that reads as selected beside plain cards.
-    static let peach = Color(red: 0.2, green: 0.16, blue: 0.31)
-    static let lilac = Color(red: 0.125, green: 0.12, blue: 0.15)
-    static let sage = Color(red: 0.115, green: 0.13, blue: 0.12)
-    static let butter = Color(red: 0.14, green: 0.13, blue: 0.11)
-    /// Bright icon colours, one per card, as in the reference: green, violet, coral and gold.
-    static let icons = [Color(red: 0.36, green: 0.85, blue: 0.5), Color(red: 0.68, green: 0.55, blue: 1),
-                        Color(red: 1, green: 0.42, blue: 0.36), Color(red: 1, green: 0.8, blue: 0.3)]
-    /// The orb glows in light, warm tones whatever the page colour; it is the figure for a language
-    /// without a landmark.
-    static let glowButter = Color(red: 1, green: 0.944, blue: 0.78)
-    static let glowPeach = Color(red: 1, green: 0.89, blue: 0.81)
-    static let glowOrange = Color(red: 1, green: 0.54, blue: 0.30)
+    static let surface = Color(white: 0.11)
+    /// The highlighted card or chip: a lighter grey that reads as selected beside plain cards.
+    static let peach = Color(white: 0.24)
+    static let lilac = Color(white: 0.125)
+    static let sage = Color(white: 0.115)
+    static let butter = Color(white: 0.135)
+    /// Icon colours, kept as a list so cards can still vary: white and soft greys.
+    static let icons = [Color(white: 1), Color(white: 0.85), Color(white: 0.92), Color(white: 0.78)]
+    /// The orb, the figure for a language without a landmark, glows in silver.
+    static let glowButter = Color(white: 0.97)
+    static let glowPeach = Color(white: 0.88)
+    static let glowOrange = Color(white: 0.62)
     static let panels = [peach, lilac, sage, butter]
 }
 
@@ -40,7 +36,7 @@ extension View {
 struct Brand: View {
     var body: some View {
         HStack(spacing: 8) {
-            Circle().fill(RadialGradient(colors: [Color(red: 0.86, green: 0.8, blue: 1), MuralColor.accent], center: .topLeading, startRadius: 0, endRadius: 18)).frame(width: 17, height: 17)
+            Image(systemName: "leaf.fill").font(.system(size: 19, weight: .semibold)).frame(width: 20, height: 20)
             Text("mural").font(.system(size: 30, weight: .bold, design: .rounded)).tracking(-1.6)
         }.foregroundStyle(MuralColor.ink).accessibilityLabel("Mural")
     }
@@ -102,9 +98,9 @@ struct MuralOrb: View {
                             [0,0], [0.5,0], [1,0],
                             [0,0.5], [Float(0.5 + sin(phase) * 0.08), Float(0.5 + cos(phase) * 0.06)], [1,0.5],
                             [0,1], [0.5,1], [1,1]
-                        ], colors: [Color(red: 1, green: 0.97, blue: 0.82), MuralColor.glowButter, MuralColor.glowPeach,
-                                    Color(red: 1, green: 0.70, blue: 0.42), MuralColor.glowOrange, Color(red: 0.80, green: 0.68, blue: 0.93),
-                                    Color(red: 0.96, green: 0.42, blue: 0.35), Color(red: 0.99, green: 0.62, blue: 0.46), Color(red: 0.86, green: 0.75, blue: 0.95)])
+                        ], colors: [Color(white: 1), MuralColor.glowButter, MuralColor.glowPeach,
+                                    Color(white: 0.8), MuralColor.glowOrange, Color(white: 0.74),
+                                    Color(white: 0.45), Color(white: 0.6), Color(white: 0.82)])
                         Ellipse().fill(.white.opacity(0.65)).frame(width: side * 0.48, height: side * 0.15).blur(radius: 13)
                             .rotationEffect(.degrees(-28)).offset(x: -side * 0.17, y: -side * 0.28)
                         Ellipse().stroke(MuralColor.glowButter.opacity(0.48), lineWidth: 16).frame(width: side * 1.2, height: side * 0.5)
