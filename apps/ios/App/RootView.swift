@@ -207,10 +207,10 @@ struct TalkView: View {
                 else if !coordinator.isRunning { coordinator.start() }
             } label: {
                 ZStack {
-                    Circle().fill(LinearGradient(colors: [Color(red: 1, green: 0.73, blue: 0.48), MuralColor.orange], startPoint: .topLeading, endPoint: .bottomTrailing))
+                    Circle().fill(LinearGradient(colors: [Color(red: 0.72, green: 0.6, blue: 1), MuralColor.accent], startPoint: .topLeading, endPoint: .bottomTrailing))
                     if coordinator.state == .connecting || coordinator.state == .closing { ProgressView().tint(MuralColor.ink) }
                     else { Image(systemName: coordinator.isMuted && coordinator.state == .active ? "mic.slash" : "mic").font(.system(size: 28, weight: .regular)).contentTransition(.symbolEffect(.replace)) }
-                }.frame(width: 76, height: 76).shadow(color: MuralColor.orange.opacity(0.25), radius: 10, y: 6)
+                }.frame(width: 76, height: 76).shadow(color: MuralColor.accent.opacity(0.25), radius: 10, y: 6)
             }.buttonStyle(.plain).padding(.bottom, 18)
                 .disabled(coordinator.state == .connecting || coordinator.state == .closing)
                 .accessibilityLabel(coordinator.state == .active ? (coordinator.isMuted ? "Unmute microphone" : "Mute microphone") : "Start conversation")
@@ -291,7 +291,7 @@ struct TypedReplyView: View {
                 Text("Say it your way.").font(.system(.title, design: .rounded, weight: .semibold))
                 TextField("Reply in \(coordinator.language.name) or another language", text: $text, axis: .vertical).lineLimit(3...6).focused($focused).padding(18).background(MuralColor.surface, in: RoundedRectangle(cornerRadius: 22))
                 Button { sending = true; Task { await coordinator.sendTyped(text); sending = false; dismiss() } } label: {
-                    HStack { Text(sending ? "Sending…" : "Send reply"); Spacer(); Image(systemName: "arrow.up") }.padding(18).foregroundStyle(MuralColor.onAccent).background(MuralColor.orange, in: Capsule())
+                    HStack { Text(sending ? "Sending…" : "Send reply"); Spacer(); Image(systemName: "arrow.up") }.padding(18).foregroundStyle(MuralColor.onAccent).background(MuralColor.accent, in: Capsule())
                 }.disabled(sending || text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 Spacer()
             }.padding(26).foregroundStyle(MuralColor.ink).background(MuralColor.cream)

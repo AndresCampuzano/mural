@@ -12,9 +12,17 @@ struct LanguageFigure: View {
     var active = true
     var body: some View {
         if let id = language.landmarkID, let build = Landmarks.all[id] {
-            LandmarkView(id: id, build: build, energy: energy, listening: listening, active: active)
-                .id(id)
-                .accessibilityIdentifier("landmark-\(id)")
+            ZStack {
+                // A halo behind the island: cheap in SwiftUI, and it lifts the scene off the black page.
+                GeometryReader { geometry in
+                    // Fades out inside the frame, so no edge of the gradient is ever cut off.
+                    RadialGradient(colors: [(Landmarks.halo[id] ?? MuralColor.accent).opacity(0.26 + energy * 0.12), .clear],
+                                   center: .center, startRadius: 2, endRadius: min(geometry.size.width, geometry.size.height) * 0.47)
+                }
+                LandmarkView(id: id, build: build, energy: energy, listening: listening, active: active)
+            }
+            .id(id)
+            .accessibilityIdentifier("landmark-\(id)")
         } else {
             MuralOrb(energy: energy, listening: listening, active: active)
         }
@@ -25,8 +33,13 @@ struct LanguageFigure: View {
 /// small floating island with its scene on top, centred on the origin with the island's top at y = 0.
 enum Landmarks {
     static let all: [String: () -> LandmarkScene] = [
-        "pavilion": { LandmarkScene(root: Pavilion.island(), particles: Pavilion.petals()) },
-        "torii": { LandmarkScene(root: ToriiGate.island(), particles: ToriiGate.leaves()) }
+        "pavilion": { LandmarkScene(root: Pavilion.island(), particles: Pavilion.petals() + [Geometry.fireflies(seed: 1)]) },
+        "torii": { LandmarkScene(root: ToriiGate.island(), particles: ToriiGate.leaves() + [Geometry.fireflies(seed: 2)]) }
+    ]
+    /// The soft light behind each landmark, so the scene glows against the black page.
+    static let halo: [String: Color] = [
+        "pavilion": Color(red: 0.86, green: 0.55, blue: 0.95),
+        "torii": Color(red: 1, green: 0.5, blue: 0.25)
     ]
 }
 
@@ -78,18 +91,35 @@ struct LandmarkView: UIViewRepresentable {
 
         let camera = SCNCamera()
         camera.fieldOfView = 30
+        // HDR with bloom makes lanterns, windows and lacquer highlights glow. The view is small and
+        // runs at 30 fps, so the post-process pass stays cheap.
+        camera.wantsHDR = true
+        camera.bloomIntensity = 1.3
+        camera.bloomThreshold = 1.0
+        camera.bloomBlurRadius = 8
+        camera.wantsExposureAdaptation = false
+        camera.exposureOffset = 0
+        camera.contrast = 0.15
+        camera.saturation = 1.1
+        camera.vignettingIntensity = 0
         camera.zNear = 0.1; camera.zFar = 50
         let cameraNode = SCNNode(); cameraNode.camera = camera
         cameraNode.position = SCNVector3(0, 2.4, 7.6)
         cameraNode.look(at: SCNVector3(0, 0.95, 0))
         scene.rootNode.addChildNode(cameraNode)
 
-        let sun = SCNLight(); sun.type = .directional; sun.intensity = 950
-        sun.color = UIColor(red: 1, green: 0.93, blue: 0.84, alpha: 1)
-        let sunNode = SCNNode(); sunNode.light = sun; sunNode.eulerAngles = SCNVector3(-0.75, -0.6, 0)
-        scene.rootNode.addChildNode(sunNode)
-        let fill = SCNLight(); fill.type = .ambient; fill.intensity = 420
-        fill.color = UIColor(red: 0.72, green: 0.66, blue: 0.78, alpha: 1)
+        // Three-point light: a warm key from the front left, a cool rim from behind that outlines the
+        // roofs and trees, and a low violet fill so shadows keep their colour instead of going dead.
+        let key = SCNLight(); key.type = .directional; key.intensity = 1350
+        key.color = UIColor(red: 1, green: 0.9, blue: 0.78, alpha: 1)
+        let keyNode = SCNNode(); keyNode.light = key; keyNode.eulerAngles = SCNVector3(-0.8, -0.55, 0)
+        scene.rootNode.addChildNode(keyNode)
+        let rim = SCNLight(); rim.type = .directional; rim.intensity = 900
+        rim.color = UIColor(red: 0.62, green: 0.72, blue: 1, alpha: 1)
+        let rimNode = SCNNode(); rimNode.light = rim; rimNode.eulerAngles = SCNVector3(-0.35, 2.6, 0)
+        scene.rootNode.addChildNode(rimNode)
+        let fill = SCNLight(); fill.type = .ambient; fill.intensity = 260
+        fill.color = UIColor(red: 0.62, green: 0.56, blue: 0.82, alpha: 1)
         let fillNode = SCNNode(); fillNode.light = fill
         scene.rootNode.addChildNode(fillNode)
 
@@ -166,6 +196,64 @@ private enum Geometry {
         material.isDoubleSided = doubleSided
         return material
     }
+    /// Lacquered wood, painted metal or gilding: a highlight that moves as the island sways.
+    static func lacquer(_ color: UIColor, shine: CGFloat = 0.6) -> SCNMaterial {
+        let material = SCNMaterial()
+        material.diffuse.contents = color
+        material.lightingModel = .blinn
+        material.specular.contents = UIColor(white: shine, alpha: 1)
+        material.shininess = 0.35
+        return material
+    }
+
+    /// A surface that gives off light, bright enough to bloom.
+    static func glow(_ color: UIColor, strength: CGFloat = 2.6) -> SCNMaterial {
+        let material = SCNMaterial()
+        material.diffuse.contents = color
+        material.emission.contents = color
+        material.emission.intensity = strength
+        material.lightingModel = .constant
+        return material
+    }
+
+    /// A warm point light that pools on the ground around a lantern and fades within `range`.
+    static func lamp(at position: SCNVector3, color: UIColor = UIColor(red: 1, green: 0.72, blue: 0.4, alpha: 1),
+                     intensity: CGFloat = 700, range: CGFloat = 1.1) -> SCNNode {
+        let light = SCNLight(); light.type = .omni
+        light.color = color; light.intensity = intensity
+        light.attenuationStartDistance = 0; light.attenuationEndDistance = range; light.attenuationFalloffExponent = 2
+        let node = SCNNode(); node.light = light; node.position = position
+        return node
+    }
+
+    /// Slow, glowing motes drifting up over the island.
+    static func fireflies(seed: UInt64) -> (SCNParticleSystem, SCNNode) {
+        let system = SCNParticleSystem()
+        system.particleImage = Textures.mote
+        system.birthRate = 2.2
+        system.particleLifeSpan = 5
+        system.particleLifeSpanVariation = 2
+        system.particleSize = 0.05
+        system.particleSizeVariation = 0.025
+        system.particleColor = UIColor(red: 1, green: 0.86, blue: 0.5, alpha: 1)
+        system.particleColorVariation = SCNVector4(0.05, 0.1, 0.2, 0)
+        system.emitterShape = SCNBox(width: 3, height: 1.2, length: 2.4, chamferRadius: 0)
+        system.birthLocation = .volume
+        system.particleVelocity = 0.06
+        system.particleVelocityVariation = 0.05
+        system.acceleration = SCNVector3(0, 0.025, 0)
+        system.blendMode = .additive
+        system.isLightingEnabled = false
+        system.isAffectedByGravity = false
+        system.loops = true
+        // Fade in and out over each mote's life rather than popping.
+        let fade = CAKeyframeAnimation(); fade.values = [0, 1, 1, 0]; fade.keyTimes = [0, 0.2, 0.7, 1]
+        system.propertyControllers = [.opacity: SCNParticlePropertyController(animation: fade)]
+        let emitter = SCNNode(); emitter.position = SCNVector3(0, 0.75, 0.1)
+        _ = seed
+        return (system, emitter)
+    }
+
     static func textured(_ image: UIImage, repeat scale: CGSize = CGSize(width: 1, height: 1)) -> SCNMaterial {
         let material = SCNMaterial()
         material.diffuse.contents = image
@@ -333,8 +421,11 @@ private enum Geometry {
 
     /// Hundreds of leaf or blossom cards in one mesh around the given clusters, plus hanging
     /// strands for a weeping tree.
+    /// `fill` is how deep into each cluster cards reach, so a crown can be dense right through
+    /// rather than a shell; `shade`, when given, colours a card by where it sits.
     static func foliage(clusters: [(simd_float3, Float)], count: Int, size: ClosedRange<Float>, colors: [UIColor], image: UIImage,
-                        strands: [(simd_float3, Float)] = [], seed: UInt64, wind strength: Float = 0.018) -> SCNNode {
+                        strands: [(simd_float3, Float)] = [], seed: UInt64, wind strength: Float = 0.018,
+                        fill: Float = 0.78, shade: ((simd_float3) -> UIColor)? = nil) -> SCNNode {
         var random = Seeded(seed)
         var cards: [Card] = []
         func card(at center: simd_float3, outward: simd_float3) {
@@ -342,7 +433,8 @@ private enum Geometry {
             var u = simd_normalize(simd_cross(random.direction(), outward))
             if !u.x.isFinite { u = simd_float3(1, 0, 0) }
             let v = simd_normalize(simd_cross(outward, u)) * 0.9 + simd_float3(0, -0.25, 0)
-            let color = vector(colors[Int(random.unit() * Float(colors.count - 1) + 0.5)], jitter: 0.08, using: &random)
+            let base = shade?(center) ?? colors[Int(random.unit() * Float(colors.count - 1) + 0.5)]
+            let color = vector(base, jitter: 0.09, using: &random)
             // Lit as if facing mostly upwards, so cards turned away from the sun are not left black.
             let normal = simd_normalize(outward * 0.45 + simd_float3(0, 1, 0))
             cards.append(Card(center: center, u: u * s, v: simd_normalize(v) * s, normal: normal, color: color))
@@ -351,7 +443,7 @@ private enum Geometry {
             let (centre, radius) = clusters[Int(random.unit() * Float(clusters.count - 1) + 0.5)]
             let direction = random.direction()
             // Mostly on the outside of the cloud, where leaves catch the light, with some inside.
-            let depth = 0.78 + 0.3 * sqrt(random.unit())
+            let depth = fill + (1.06 - fill) * sqrt(random.unit())
             card(at: centre + direction * radius * depth, outward: direction)
         }
         for (top, length) in strands {
@@ -514,6 +606,14 @@ private enum Textures {
         stem.lineWidth = size * 0.05; UIColor.white.setStroke(); stem.stroke()
     }
 
+    /// A soft round glow for fireflies.
+    static let mote: UIImage = draw(32) { size in
+        let colors = [UIColor.white.cgColor, UIColor(white: 1, alpha: 0).cgColor] as CFArray
+        let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: [0, 1])!
+        UIGraphicsGetCurrentContext()?.drawRadialGradient(gradient, startCenter: CGPoint(x: size / 2, y: size / 2), startRadius: 0,
+                                                          endCenter: CGPoint(x: size / 2, y: size / 2), endRadius: size / 2, options: [])
+    }
+
     /// A pointed leaf for evergreens and shrubs.
     static let leaf: UIImage = draw(32) { size in
         let path = UIBezierPath()
@@ -590,6 +690,12 @@ private enum Pavilion {
         root.addChildNode(pavilion)
         root.addChildNode(cherry())
         root.addChildNode(pine(at: simd_float3(-1.35, 0, -0.65)))
+        // A stone lantern by the stairs, and warm light under the eaves from the hanging lanterns.
+        let stoneLantern = ToriiGate.lantern(); stoneLantern.position = SCNVector3(site.x + 0.78, 0, site.y + 0.9)
+        root.addChildNode(stoneLantern)
+        root.addChildNode(Geometry.lamp(at: SCNVector3(site.x + 0.78, 0.5, site.y + 0.9), intensity: 650, range: 0.9))
+        root.addChildNode(Geometry.lamp(at: SCNVector3(site.x, 1.05, site.y + 0.35), color: UIColor(red: 1, green: 0.55, blue: 0.45, alpha: 1),
+                                        intensity: 800, range: 1.3))
         return root
     }
 
@@ -624,7 +730,7 @@ private enum Pavilion {
         }
         for corner in corners {
             let pillar = SCNCylinder(radius: 0.045, height: 0.88); pillar.radialSegmentCount = 8
-            building.addChildNode(Geometry.node(pillar, wood, at: SCNVector3(corner.x, 0.86, corner.z)))
+            building.addChildNode(Geometry.node(pillar, Geometry.lacquer(wood), at: SCNVector3(corner.x, 0.86, corner.z)))
             let footing = SCNCylinder(radius: 0.065, height: 0.05); footing.radialSegmentCount = 8
             building.addChildNode(Geometry.node(footing, stone.darker(0.12), at: SCNVector3(corner.x, 0.445, corner.z)))
             // A painted bracket where each pillar meets the eaves.
@@ -664,6 +770,19 @@ private enum Pavilion {
                 building.addChildNode(motif)
             }
         }
+        // Silk lanterns hanging under the front eaves: red, capped in blue, lit from within.
+        for corner in corners where corner.z > -0.1 {
+            let spot = corner * 1.14
+            building.addChildNode(Geometry.limb(from: SCNVector3(spot.x, 1.3, spot.z), to: SCNVector3(spot.x, 1.13, spot.z), radius: 0.004, color: wood, taper: 1))
+            let body = SCNCylinder(radius: 0.045, height: 0.11); body.radialSegmentCount = 10
+            building.addChildNode(Geometry.node(body, Geometry.glow(Geometry.rgb(1, 0.3, 0.22), strength: 3.4), at: SCNVector3(spot.x, 1.07, spot.z)))
+            for y: Float in [1.13, 1.01] {
+                let cap = SCNCylinder(radius: 0.05, height: 0.02); cap.radialSegmentCount = 10
+                building.addChildNode(Geometry.node(cap, Geometry.lacquer(Geometry.rgb(0.15, 0.3, 0.7)), at: SCNVector3(spot.x, y, spot.z)))
+            }
+            let tassel = SCNCone(topRadius: 0.012, bottomRadius: 0.004, height: 0.06); tassel.radialSegmentCount = 6
+            building.addChildNode(Geometry.node(tassel, Geometry.rgb(0.95, 0.3, 0.25), at: SCNVector3(spot.x, 0.97, spot.z)))
+        }
         let roof = Geometry.curvedRoof(sides: 6, eave: 1.2, apex: 0.08, height: 0.58, lift: 0.22, tile: tile, under: green, rows: 9, endTiles: true)
         roof.position = SCNVector3(0, 1.32, 0)
         building.addChildNode(roof)
@@ -681,26 +800,37 @@ private enum Pavilion {
         let base = SCNVector3(1.2, 0, -0.35), fork = SCNVector3(1.12, 0.85, -0.35)
         let wood = SCNNode()
         wood.addChildNode(Geometry.limb(from: base, to: fork, radius: 0.1, color: bark))
-        let ends = [SCNVector3(0.72, 1.6, -0.15), SCNVector3(1.55, 1.7, -0.55), SCNVector3(1.2, 2.0, -0.25), SCNVector3(0.95, 1.85, -0.6)]
+        let ends = [SCNVector3(0.72, 1.6, -0.15), SCNVector3(1.55, 1.7, -0.55), SCNVector3(1.2, 2.0, -0.25), SCNVector3(0.95, 1.85, -0.6),
+                    SCNVector3(1.35, 1.55, 0.05)]
         for end in ends { wood.addChildNode(Geometry.limb(from: fork, to: end, radius: 0.055, color: bark)) }
         tree.addChildNode(Geometry.flattened(wood))
         let clusters: [(simd_float3, Float)] = [
-            (simd_float3(1.2, 1.95, -0.35), 0.5), (simd_float3(0.75, 1.68, -0.18), 0.4), (simd_float3(1.62, 1.75, -0.52), 0.42),
-            (simd_float3(1.0, 2.2, -0.48), 0.36), (simd_float3(1.45, 2.15, -0.12), 0.34), (simd_float3(0.9, 1.8, 0.15), 0.32)
+            (simd_float3(1.2, 1.95, -0.35), 0.52), (simd_float3(0.75, 1.68, -0.18), 0.42), (simd_float3(1.62, 1.75, -0.52), 0.44),
+            (simd_float3(1.0, 2.22, -0.48), 0.38), (simd_float3(1.45, 2.18, -0.12), 0.36), (simd_float3(0.9, 1.8, 0.15), 0.34),
+            (simd_float3(1.3, 1.6, 0.05), 0.32), (simd_float3(0.6, 1.95, -0.45), 0.3)
         ]
-        // A darker core behind the blossom, so the canopy reads full from every angle.
-        let core = SCNNode()
-        for (centre, radius) in clusters {
-            let cloud = SCNSphere(radius: CGFloat(radius * 0.66)); cloud.segmentCount = 8
-            core.addChildNode(Geometry.node(cloud, Geometry.rgb(0.93, 0.66, 0.76), at: SCNVector3(centre)))
+        // Fine twigs into every cloud, glimpsed through the blossom.
+        let twigs = SCNNode()
+        for (index, (centre, radius)) in clusters.enumerated() {
+            let from = ends[index % ends.count]
+            twigs.addChildNode(Geometry.limb(from: from, to: SCNVector3(centre + simd_float3(0, -radius * 0.2, 0)), radius: 0.025, color: bark))
         }
-        tree.addChildNode(Geometry.flattened(core))
+        tree.addChildNode(Geometry.flattened(twigs))
         let strands: [(simd_float3, Float)] = [
-            (simd_float3(0.5, 1.6, -0.1), 0.55), (simd_float3(0.7, 1.5, 0.2), 0.6), (simd_float3(1.85, 1.6, -0.45), 0.6),
-            (simd_float3(1.6, 1.5, 0.05), 0.55), (simd_float3(1.0, 1.55, 0.35), 0.5), (simd_float3(1.75, 1.55, -0.8), 0.5)
+            (simd_float3(0.45, 1.6, -0.1), 0.6), (simd_float3(0.7, 1.5, 0.25), 0.65), (simd_float3(1.9, 1.6, -0.45), 0.65),
+            (simd_float3(1.6, 1.45, 0.1), 0.6), (simd_float3(1.0, 1.55, 0.4), 0.55), (simd_float3(1.8, 1.55, -0.85), 0.55),
+            (simd_float3(1.3, 1.4, 0.3), 0.5)
         ]
-        tree.addChildNode(Geometry.foliage(clusters: clusters, count: 1900, size: 0.045...0.075, colors: blossom, image: Textures.blossom,
-                                           strands: strands, seed: 21))
+        // Dense right through, no solid core: lavender on the shaded side warming to pink in the
+        // sun, and paler at the crown where the light catches it, as in the reference.
+        let lavender = simd_float3(0.62, 0.52, 0.8), pink = simd_float3(0.9, 0.52, 0.7), white = simd_float3(0.95, 0.82, 0.9)
+        tree.addChildNode(Geometry.foliage(clusters: clusters, count: 4200, size: 0.04...0.068, colors: blossom, image: Textures.blossom,
+                                           strands: strands, seed: 21, fill: 0.15) { point in
+            let across = simd_clamp((point.x - 0.45) / 1.4, 0, 1)
+            let height = simd_clamp((point.y - 1.7) / 0.8, 0, 1)
+            let tone = simd_mix(simd_mix(lavender, pink, simd_float3(repeating: across)), white, simd_float3(repeating: height * 0.3))
+            return UIColor(red: CGFloat(tone.x), green: CGFloat(tone.y), blue: CGFloat(tone.z), alpha: 1)
+        })
         return tree
     }
 
@@ -711,16 +841,9 @@ private enum Pavilion {
         let tiers: [(simd_float3, Float)] = [
             (foot + simd_float3(0, 0.55, 0), 0.32), (foot + simd_float3(0.08, 0.8, 0.05), 0.26), (foot + simd_float3(0.02, 1.02, 0), 0.18)
         ]
-        let core = SCNNode()
-        for (centre, radius) in tiers {
-            let cloud = SCNSphere(radius: CGFloat(radius * 0.7)); cloud.segmentCount = 7
-            let puff = Geometry.node(cloud, Geometry.rgb(0.13, 0.26, 0.16), at: SCNVector3(centre)); puff.scale = SCNVector3(1.3, 0.6, 1.3)
-            core.addChildNode(puff)
-        }
-        tree.addChildNode(Geometry.flattened(core))
-        tree.addChildNode(Geometry.foliage(clusters: tiers.map { ($0.0, $0.1) }, count: 600, size: 0.035...0.055,
+        tree.addChildNode(Geometry.foliage(clusters: tiers.map { ($0.0, $0.1) }, count: 1200, size: 0.035...0.055,
                                            colors: [Geometry.rgb(0.18, 0.38, 0.22), Geometry.rgb(0.24, 0.45, 0.26), Geometry.rgb(0.14, 0.3, 0.18)],
-                                           image: Textures.leaf, seed: 31, wind: 0.008))
+                                           image: Textures.leaf, seed: 31, wind: 0.008, fill: 0.2))
         return tree
     }
 
@@ -768,8 +891,11 @@ private enum ToriiGate {
         root.addChildNode(torii)
         let pagodaNode = pagoda(); pagodaNode.position = SCNVector3(tower.x, 0, tower.y); pagodaNode.scale = SCNVector3(1.45, 1.45, 1.45)
         root.addChildNode(pagodaNode)
+        root.addChildNode(Geometry.lamp(at: SCNVector3(tower.x, 0.55, tower.y + 0.45), color: UIColor(red: 1, green: 0.5, blue: 0.3, alpha: 1),
+                                        intensity: 600, range: 1.0))
         for spot in [simd_float2(-1.2, 0.8), simd_float2(0.4, 1.05)] {
             let light = lantern(); light.position = SCNVector3(spot.x, 0, spot.y)
+            root.addChildNode(Geometry.lamp(at: SCNVector3(spot.x, 0.5, spot.y), intensity: 650, range: 0.9))
             root.addChildNode(light)
         }
         root.addChildNode(mapleTree())
@@ -781,7 +907,7 @@ private enum ToriiGate {
         let gate = SCNNode()
         for x: Float in [-0.6, 0.6] {
             let pillar = SCNCone(topRadius: 0.06, bottomRadius: 0.075, height: 1.7); pillar.radialSegmentCount = 12
-            gate.addChildNode(Geometry.node(pillar, vermilion, at: SCNVector3(x, 0.95, 0)))
+            gate.addChildNode(Geometry.node(pillar, Geometry.lacquer(vermilion), at: SCNVector3(x, 0.95, 0)))
             let foot = SCNCylinder(radius: 0.095, height: 0.22); foot.radialSegmentCount = 12
             gate.addChildNode(Geometry.node(foot, black, at: SCNVector3(x, 0.11, 0)))
             let collar = SCNCylinder(radius: 0.1, height: 0.03); collar.radialSegmentCount = 12
@@ -791,14 +917,14 @@ private enum ToriiGate {
             gate.addChildNode(Geometry.node(ring, black, at: SCNVector3(x, 1.62, 0)))
         }
         let nuki = SCNBox(width: 1.62, height: 0.09, length: 0.08, chamferRadius: 0.005)
-        gate.addChildNode(Geometry.node(nuki, vermilion, at: SCNVector3(0, 1.38, 0)))
+        gate.addChildNode(Geometry.node(nuki, Geometry.lacquer(vermilion), at: SCNVector3(0, 1.38, 0)))
         // The plaque between the beams: black, framed in gold.
         let frame = SCNBox(width: 0.22, height: 0.26, length: 0.05, chamferRadius: 0.005)
-        gate.addChildNode(Geometry.node(frame, gold, at: SCNVector3(0, 1.53, 0.005)))
+        gate.addChildNode(Geometry.node(frame, Geometry.lacquer(gold, shine: 0.9), at: SCNVector3(0, 1.53, 0.005)))
         let board = SCNBox(width: 0.17, height: 0.21, length: 0.06, chamferRadius: 0)
         gate.addChildNode(Geometry.node(board, black, at: SCNVector3(0, 1.53, 0.01)))
         let shimaki = SCNBox(width: 1.78, height: 0.08, length: 0.11, chamferRadius: 0.005)
-        gate.addChildNode(Geometry.node(shimaki, vermilion, at: SCNVector3(0, 1.69, 0)))
+        gate.addChildNode(Geometry.node(shimaki, Geometry.lacquer(vermilion), at: SCNVector3(0, 1.69, 0)))
         // The kasagi: a black top beam whose underside rises towards both ends.
         let half: CGFloat = 1.1, profile = UIBezierPath()
         let samples = 14
@@ -813,7 +939,7 @@ private enum ToriiGate {
         }
         profile.close()
         let kasagi = SCNShape(path: profile, extrusionDepth: 0.16)
-        gate.addChildNode(Geometry.node(kasagi, black, at: SCNVector3(0, 1.73, 0)))
+        gate.addChildNode(Geometry.node(kasagi, Geometry.lacquer(black, shine: 0.5), at: SCNVector3(0, 1.73, 0)))
         return Geometry.flattened(gate)
     }
 
@@ -836,7 +962,7 @@ private enum ToriiGate {
                 wall.eulerAngles.y = angle
                 tower.addChildNode(wall)
                 let pane = SCNBox(width: CGFloat(width) * 0.22, height: CGFloat(height) * 0.38, length: 0.01, chamferRadius: 0)
-                let window = Geometry.node(pane, Geometry.rgb(0.2, 0.14, 0.12), at: SCNVector3(outward * (width / 2 + 0.01) + simd_float3(0, y + height / 2, 0)))
+                let window = Geometry.node(pane, Geometry.glow(Geometry.rgb(1, 0.55, 0.25), strength: 1.2), at: SCNVector3(outward * (width / 2 + 0.01) + simd_float3(0, y + height / 2, 0)))
                 window.eulerAngles.y = angle
                 tower.addChildNode(window)
             }
@@ -850,17 +976,28 @@ private enum ToriiGate {
                                           rows: 5, endTiles: false, rotation: .pi / 4)
             cap.position = SCNVector3(0, y, 0)
             tower.addChildNode(cap)
+            // Paper lanterns hanging from the two front corners of the lowest roof.
+            if tier == 0 {
+                for angle: Float in [.pi / 4, 3 * .pi / 4] {
+                    let spot = simd_float3(cos(angle), 0, sin(angle)) * eave * 0.96
+                    tower.addChildNode(Geometry.limb(from: SCNVector3(spot.x, y - 0.01, spot.z), to: SCNVector3(spot.x, y - 0.07, spot.z), radius: 0.003, color: black, taper: 1))
+                    let paper = SCNSphere(radius: 0.032); paper.segmentCount = 10
+                    let chochin = Geometry.node(paper, Geometry.glow(Geometry.rgb(1, 0.36, 0.2), strength: 3.4), at: SCNVector3(spot.x, y - 0.11, spot.z))
+                    chochin.scale = SCNVector3(1, 1.35, 1)
+                    tower.addChildNode(chochin)
+                }
+            }
             // A small bell under each lifted corner.
             for corner in 0..<4 {
                 let angle = Float(corner) * .pi / 2 + .pi / 4
                 let bell = SCNSphere(radius: 0.018); bell.segmentCount = 8
                 let spot = simd_float3(cos(angle), 0, sin(angle)) * eave * 1.02
-                tower.addChildNode(Geometry.node(bell, gold, at: SCNVector3(spot.x, y + 0.02, spot.z)))
+                tower.addChildNode(Geometry.node(bell, Geometry.lacquer(gold, shine: 0.9), at: SCNVector3(spot.x, y + 0.02, spot.z)))
             }
             y += 0.1
         }
         let spire = SCNCylinder(radius: 0.015, height: 0.42); spire.radialSegmentCount = 6
-        tower.addChildNode(Geometry.node(spire, gold, at: SCNVector3(0, y + 0.21, 0)))
+        tower.addChildNode(Geometry.node(spire, Geometry.lacquer(gold, shine: 0.9), at: SCNVector3(0, y + 0.21, 0)))
         for i in 0..<5 {
             let ring = SCNCylinder(radius: 0.042 - CGFloat(i) * 0.003, height: 0.014); ring.radialSegmentCount = 8
             tower.addChildNode(Geometry.node(ring, gold.lighter(0.1), at: SCNVector3(0, y + 0.08 + Float(i) * 0.06, 0)))
@@ -881,9 +1018,7 @@ private enum ToriiGate {
         let shelf = SCNBox(width: 0.18, height: 0.03, length: 0.18, chamferRadius: 0)
         lantern.addChildNode(Geometry.node(shelf, stone.darker(0.05), at: SCNVector3(0, 0.37, 0)))
         let glow = SCNBox(width: 0.14, height: 0.12, length: 0.14, chamferRadius: 0)
-        let glowMaterial = Geometry.material(Geometry.rgb(1, 0.78, 0.45))
-        glowMaterial.emission.contents = UIColor(red: 1, green: 0.7, blue: 0.35, alpha: 1)
-        lantern.addChildNode(Geometry.node(glow, glowMaterial, at: SCNVector3(0, 0.445, 0)))
+        lantern.addChildNode(Geometry.node(glow, Geometry.glow(Geometry.rgb(1, 0.74, 0.4), strength: 3), at: SCNVector3(0, 0.445, 0)))
         let cap = SCNPyramid(width: 0.27, height: 0.11, length: 0.27)
         lantern.addChildNode(Geometry.node(cap, stone.darker(0.1), at: SCNVector3(0, 0.505, 0)))
         let knob = SCNSphere(radius: 0.025); knob.segmentCount = 8
@@ -905,13 +1040,14 @@ private enum ToriiGate {
             (simd_float3(1.45, 1.28, -1.05), 0.38), (simd_float3(1.12, 1.12, -0.92), 0.28),
             (simd_float3(1.72, 1.18, -1.12), 0.29), (simd_float3(1.48, 1.55, -1.18), 0.26)
         ]
-        let core = SCNNode()
-        for (centre, radius) in clusters {
-            let cloud = SCNSphere(radius: CGFloat(radius * 0.62)); cloud.segmentCount = 8
-            core.addChildNode(Geometry.node(cloud, Geometry.rgb(0.72, 0.2, 0.09), at: SCNVector3(centre)))
-        }
-        tree.addChildNode(Geometry.flattened(core))
-        tree.addChildNode(Geometry.foliage(clusters: clusters, count: 1300, size: 0.05...0.08, colors: maple, image: Textures.maple, seed: 41))
+        // Deep red inside and below, turning orange and gold towards the sunlit crown.
+        let red = simd_float3(0.62, 0.09, 0.06), orange = simd_float3(0.85, 0.3, 0.08), gold = simd_float3(0.92, 0.55, 0.15)
+        tree.addChildNode(Geometry.foliage(clusters: clusters, count: 2600, size: 0.045...0.075, colors: maple, image: Textures.maple,
+                                           seed: 41, fill: 0.15) { point in
+            let t = simd_clamp((point.y - 0.95) / 0.75, 0, 1)
+            let tone = t < 0.6 ? simd_mix(red, orange, simd_float3(repeating: t / 0.6)) : simd_mix(orange, gold, simd_float3(repeating: (t - 0.6) / 0.4))
+            return UIColor(red: CGFloat(tone.x), green: CGFloat(tone.y), blue: CGFloat(tone.z), alpha: 1)
+        })
         return tree
     }
 
@@ -919,14 +1055,9 @@ private enum ToriiGate {
     static func shrubs() -> SCNNode {
         let spots: [(simd_float3, Float)] = [(simd_float3(0.45, 0.1, -0.35), 0.14), (simd_float3(1.5, 0.1, -0.2), 0.16), (simd_float3(0.6, 0.1, -1.1), 0.13)]
         let group = SCNNode()
-        let core = SCNNode()
-        for (centre, radius) in spots {
-            let puff = SCNSphere(radius: CGFloat(radius * 0.75)); puff.segmentCount = 7
-            core.addChildNode(Geometry.node(puff, Geometry.rgb(0.14, 0.3, 0.16), at: SCNVector3(centre)))
-        }
-        group.addChildNode(Geometry.flattened(core))
-        group.addChildNode(Geometry.foliage(clusters: spots, count: 420, size: 0.03...0.045,
-                                            colors: [Geometry.rgb(0.22, 0.45, 0.24), Geometry.rgb(0.3, 0.52, 0.27)], image: Textures.leaf, seed: 51, wind: 0.006))
+        group.addChildNode(Geometry.foliage(clusters: spots, count: 800, size: 0.03...0.045,
+                                            colors: [Geometry.rgb(0.22, 0.45, 0.24), Geometry.rgb(0.3, 0.52, 0.27)], image: Textures.leaf, seed: 51,
+                                            wind: 0.006, fill: 0.1))
         return group
     }
 

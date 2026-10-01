@@ -676,3 +676,21 @@ and roughly ten thousand triangles.
 
 - Both scenes checked by screenshot on an iPhone 17 simulator; installed on the iPhone and iPad.
 - **Not measured:** frame time, battery or thermal cost on a device.
+
+## Violet palette and lit landmarks (1 October 2026)
+
+The interface follows a near-black, card-based reference the learner chose: a true black page,
+dark grey cards, white text, a violet accent (`MuralColor.accent`, formerly `orange`) with white
+text on it, and bright green, violet, coral and gold icons. The fallback orb keeps its warm glow.
+
+The landmarks were lit properly. A warm key, a cool rim light from behind and a low violet fill
+replace the single sun; the camera renders in HDR with bloom, so lanterns, glowing pagoda windows
+and silk and paper lanterns (new under the pavilion eaves and on the pagoda) glow, and warm point
+lights pool around each lantern. Lacquered pillars, beams, gilding and bells take a specular
+highlight; fireflies drift over each island, and a soft halo sits behind it. The trees lost
+their solid core spheres: the cherry is a dense crown of about 4,200 blossom cards shading from
+lavender to pink with a paler top, and the maple deep red to orange to gold.
+
+- **143 core tests passed.** Both scenes and the Themes screen checked by screenshot on an
+  iPhone 17 simulator; installed on the iPhone and iPad.
+- **Not measured:** the cost of HDR and bloom on a device's frame time or battery.
