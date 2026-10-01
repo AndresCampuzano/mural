@@ -634,3 +634,14 @@ explanations are intended below it. The teaching-focus stage is capped by level 
   and two meaning languages.
 - **Not verified:** that conversations now feel easier to follow. These are model instructions;
   only real conversations at each level can show whether the model follows them.
+
+## Permanent dark appearance (30 September 2026)
+
+Mural is always dark: `UIUserInterfaceStyle` is `Dark`, the app forces `.dark`, and `MuralColor`
+holds a warm dark palette, with a `surface` colour for cards and fields and dark text on orange
+buttons. The orb keeps its light glow through separate `glow` colours. The app icon is the same
+orb on the dark page colour; only background pixels reachable from a corner were changed.
+
+- **142 core tests passed. Full native UI suite passed (26 tests)** on an iPhone 17 simulator.
+- Talk and Themes screens checked by screenshot in the simulator.
+- Installed on the physical iPhone 15 Pro Max and iPad Pro 11-inch.

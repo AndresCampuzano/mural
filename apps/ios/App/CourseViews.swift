@@ -81,7 +81,7 @@ struct CourseUnitView: View {
             Text(label.uppercased()).font(.system(.caption2, design: .rounded, weight: .medium)).tracking(1.2).foregroundStyle(MuralColor.secondary)
             FlowLayout(spacing: 6) {
                 ForEach(items, id: \.self) { item in
-                    Text(item).font(.caption).padding(.horizontal, 12).padding(.vertical, 8).background(.white.opacity(0.7), in: Capsule())
+                    Text(item).font(.caption).padding(.horizontal, 12).padding(.vertical, 8).background(MuralColor.surface.opacity(0.7), in: Capsule())
                 }
             }
         }
@@ -105,7 +105,7 @@ struct CourseUnitView: View {
                     Button { choose(course.theme(for: topic, mode: mode, language: language)) } label: {
                         Label(mode.title, systemImage: mode.symbol).font(.subheadline).lineLimit(1).minimumScaleFactor(0.8)
                             .padding(.horizontal, 14).padding(.vertical, 11).frame(maxWidth: .infinity)
-                            .background(mode == .conversation ? MuralColor.peach : .white.opacity(0.75), in: Capsule())
+                            .background(mode == .conversation ? MuralColor.peach : MuralColor.surface.opacity(0.75), in: Capsule())
                             .contentShape(Capsule())
                     }.buttonStyle(.plain).accessibilityIdentifier("course-\(topic.id)-\(mode.rawValue)")
                 }

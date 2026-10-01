@@ -196,7 +196,7 @@ struct TalkView: View {
             Button { coordinator.toggleMeaning() } label: {
                 VStack(spacing: 6) {
                     Image(systemName: coordinator.store.preferences.meaningVisible ? "captions.bubble.fill" : "captions.bubble")
-                        .frame(width: 48, height: 48).modifier(SoftGlass(tint: coordinator.store.preferences.meaningVisible ? MuralColor.butter.opacity(0.7) : .white.opacity(0.4)))
+                        .frame(width: 48, height: 48).modifier(SoftGlass(tint: coordinator.store.preferences.meaningVisible ? MuralColor.butter.opacity(0.7) : MuralColor.surface.opacity(0.4)))
                     Text("Meaning").font(.caption2)
                 }.contentShape(Rectangle())
             }.buttonStyle(.plain)
@@ -286,9 +286,9 @@ struct TypedReplyView: View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 20) {
                 Text("Say it your way.").font(.system(.title, design: .rounded, weight: .semibold))
-                TextField("Reply in \(coordinator.language.name) or another language", text: $text, axis: .vertical).lineLimit(3...6).focused($focused).padding(18).background(.white, in: RoundedRectangle(cornerRadius: 22))
+                TextField("Reply in \(coordinator.language.name) or another language", text: $text, axis: .vertical).lineLimit(3...6).focused($focused).padding(18).background(MuralColor.surface, in: RoundedRectangle(cornerRadius: 22))
                 Button { sending = true; Task { await coordinator.sendTyped(text); sending = false; dismiss() } } label: {
-                    HStack { Text(sending ? "Sending…" : "Send reply"); Spacer(); Image(systemName: "arrow.up") }.padding(18).background(MuralColor.orange, in: Capsule())
+                    HStack { Text(sending ? "Sending…" : "Send reply"); Spacer(); Image(systemName: "arrow.up") }.padding(18).foregroundStyle(MuralColor.onAccent).background(MuralColor.orange, in: Capsule())
                 }.disabled(sending || text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 Spacer()
             }.padding(26).foregroundStyle(MuralColor.ink).background(MuralColor.cream)
