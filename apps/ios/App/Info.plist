@@ -11,7 +11,7 @@
 <key>LSRequiresIPhoneOS</key><true/>
 <key>NSCameraUsageDescription</key><string>Mural uses the camera when you photograph a page, a menu or a sign to study from. The photo is sent to OpenAI to read it and is not kept.</string>
 <key>NSMicrophoneUsageDescription</key><string>Mural listens while you practise speaking. Your voice is sent to OpenAI during a conversation.</string>
-<key>UIUserInterfaceStyle</key><string>Light</string>
+<key>UIUserInterfaceStyle</key><string>Dark</string>
 <key>UILaunchScreen</key><dict/>
 <key>UIApplicationSceneManifest</key><dict><key>UIApplicationSupportsMultipleScenes</key><false/></dict>
 <key>UISupportedInterfaceOrientations</key><array><string>UIInterfaceOrientationPortrait</string></array>

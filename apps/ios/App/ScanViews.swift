@@ -84,7 +84,7 @@ struct ScansView: View {
                 Button("Delete", systemImage: "trash", role: .destructive) { deleting = scan }
             } label: { Image(systemName: "ellipsis").padding(12).contentShape(Rectangle()) }
                 .accessibilityLabel("More for \(scan.name)")
-        }.padding(14).background(.white.opacity(0.8), in: RoundedRectangle(cornerRadius: 24))
+        }.padding(14).background(MuralColor.surface.opacity(0.8), in: RoundedRectangle(cornerRadius: 24))
             .contextMenu {
                 Button("Rename", systemImage: "pencil") { renaming = scan }
                 Button("Delete", systemImage: "trash", role: .destructive) { deleting = scan }
@@ -217,7 +217,7 @@ struct NewScanView: View {
             Image(systemName: symbol).font(.system(size: 22, weight: .light))
             Text(title).font(.subheadline)
         }.frame(maxWidth: .infinity).padding(.vertical, 18)
-            .background(.white.opacity(0.8), in: RoundedRectangle(cornerRadius: 20))
+            .background(MuralColor.surface.opacity(0.8), in: RoundedRectangle(cornerRadius: 20))
             .contentShape(Rectangle())
     }
     private func preview(_ picture: PreparedPicture) -> some View {
@@ -228,7 +228,7 @@ struct NewScanView: View {
             Text(picture.detail).font(.caption).foregroundStyle(MuralColor.secondary)
             Button { read(picture) } label: {
                 HStack { Text(loading ? "Reading…" : "Read and keep it"); Spacer(); if loading { ProgressView() } else { Image(systemName: "text.viewfinder") } }
-                    .font(.headline).padding(18).background(MuralColor.orange, in: Capsule())
+                    .font(.headline).padding(18).foregroundStyle(MuralColor.onAccent).background(MuralColor.orange, in: Capsule())
             }.buttonStyle(.plain).disabled(loading).accessibilityIdentifier("picture-read")
         }
     }
@@ -347,7 +347,7 @@ struct ScanDetailView: View {
                     label("In the picture")
                     Text(study.targetText).font(.system(.title3, design: .rounded)).textSelection(.enabled)
                     ReadingHelp(text: study.targetText, language: language)
-                }.padding(18).frame(maxWidth: .infinity, alignment: .leading).background(.white.opacity(0.75), in: RoundedRectangle(cornerRadius: 22))
+                }.padding(18).frame(maxWidth: .infinity, alignment: .leading).background(MuralColor.surface.opacity(0.75), in: RoundedRectangle(cornerRadius: 22))
             }
             if !study.vocabulary.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
@@ -448,7 +448,7 @@ struct ScanDetailView: View {
                 HStack {
                     Text(making ? "Writing your test…" : activity == .conversation ? "Save and set up the conversation" : "Make and save the test")
                     Spacer(); if making { ProgressView() } else { Image(systemName: activity == .conversation ? "waveform" : "arrow.right") }
-                }.font(.headline).padding(18).background(MuralColor.orange, in: Capsule())
+                }.font(.headline).padding(18).foregroundStyle(MuralColor.onAccent).background(MuralColor.orange, in: Capsule())
             }.buttonStyle(.plain).disabled(making || (activity == .conversation && coordinator.isRunning)).accessibilityIdentifier("picture-start")
             if activity == .conversation && coordinator.isRunning {
                 Text("End the current conversation first.").font(.caption).foregroundStyle(MuralColor.secondary)
@@ -531,7 +531,7 @@ struct PictureTestView: View {
                     } else {
                         Button { check() } label: {
                             HStack { Text(marking ? "Checking…" : "Check answers"); Spacer(); if marking { ProgressView() } else { Image(systemName: "checkmark") } }
-                                .font(.headline).padding(18).background(MuralColor.orange, in: Capsule())
+                                .font(.headline).padding(18).foregroundStyle(MuralColor.onAccent).background(MuralColor.orange, in: Capsule())
                         }.buttonStyle(.plain).disabled(marking).accessibilityIdentifier("picture-test-check")
                     }
                     Text("This test is practice. It doesn’t change your recall bars: those are earned by using words in conversation.")
@@ -565,7 +565,7 @@ struct PictureTestView: View {
                     Spacer(minLength: 0)
                     Button { listen(question.passage) } label: {
                         Image(systemName: "speaker.wave.2").font(.title3).padding(12)
-                            .background(.white.opacity(0.8), in: Circle()).contentShape(Circle())
+                            .background(MuralColor.surface.opacity(0.8), in: Circle()).contentShape(Circle())
                     }.buttonStyle(.plain).accessibilityLabel("Listen").accessibilityIdentifier("picture-test-listen")
                 }
             }
@@ -580,13 +580,13 @@ struct PictureTestView: View {
                             Spacer(minLength: 0)
                             if grade != nil && option == question.answer { Image(systemName: "checkmark").foregroundStyle(MuralColor.orange) }
                         }.padding(.horizontal, 14).padding(.vertical, 11)
-                            .background(chosen ? MuralColor.peach : .white.opacity(0.75), in: RoundedRectangle(cornerRadius: 14))
+                            .background(chosen ? MuralColor.peach : MuralColor.surface.opacity(0.75), in: RoundedRectangle(cornerRadius: 14))
                             .contentShape(Rectangle())
                     }.buttonStyle(.plain).accessibilityAddTraits(chosen ? .isSelected : [])
                 }
             case .written:
                 TextField("Your answer", text: $responses[index], axis: .vertical)
-                    .padding(14).background(.white, in: RoundedRectangle(cornerRadius: 14)).disabled(grade != nil)
+                    .padding(14).background(MuralColor.surface, in: RoundedRectangle(cornerRadius: 14)).disabled(grade != nil)
             }
             if let grade {
                 VStack(alignment: .leading, spacing: 4) {

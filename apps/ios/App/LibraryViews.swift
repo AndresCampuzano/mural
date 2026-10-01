@@ -20,7 +20,7 @@ struct ThemesView: View {
                 PageHeading(eyebrow: "A place to begin", title: "What’s on\nyour mind?", subtitle: "Same friend. Somewhere new.")
                 Button { choose(nil) } label: {
                     HStack { Image(systemName: "waveform"); Text("Just talk"); Spacer(); Image(systemName: "arrow.up.right") }
-                        .font(.headline).padding(22).background(.white.opacity(0.8), in: RoundedRectangle(cornerRadius: 26))
+                        .font(.headline).padding(22).background(MuralColor.surface.opacity(0.8), in: RoundedRectangle(cornerRadius: 26))
                 }
                 if let course = coordinator.language.course {
                     CourseCard(course: course, language: coordinator.language) { choose($0) }
@@ -30,7 +30,7 @@ struct ThemesView: View {
                     HStack(spacing: 8) {
                         ForEach(categories, id: \.self) { c in
                             Button(c) { category = c }.font(.caption).padding(.horizontal, 15).padding(.vertical, 11)
-                                .background(category == c ? MuralColor.peach : .white.opacity(0.65), in: Capsule())
+                                .background(category == c ? MuralColor.peach : MuralColor.surface.opacity(0.65), in: Capsule())
                                 .accessibilityAddTraits(category == c ? .isSelected : [])
                         }
                     }
@@ -70,7 +70,7 @@ struct CurrentTopicView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     PageHeading(eyebrow: "The world today", title: "A fresh conversation.", subtitle: "What would you like to talk about?")
-                    TextField(coordinator.language.topicPlaceholder, text: $query, axis: .vertical).padding(18).background(.white, in: RoundedRectangle(cornerRadius: 20))
+                    TextField(coordinator.language.topicPlaceholder, text: $query, axis: .vertical).padding(18).background(MuralColor.surface, in: RoundedRectangle(cornerRadius: 20))
                     Button { find() } label: {
                         HStack { Text(loading ? "Finding something interesting…" : "Find a topic"); Spacer(); if loading { ProgressView() } else { Image(systemName: "sparkle.magnifyingglass") } }.padding(18).background(MuralColor.peach, in: Capsule())
                     }.disabled(loading || query.trimmingCharacters(in: .whitespaces).isEmpty)
@@ -79,7 +79,7 @@ struct CurrentTopicView: View {
                         Text(.init(brief.text)).font(.body).textSelection(.enabled)
                         SourcesView(sources: brief.sources, date: brief.retrievedAt)
                         Button("Talk about this", systemImage: "waveform") { coordinator.discuss(brief); selected(); dismiss() }
-                            .font(.headline).padding(18).frame(maxWidth: .infinity).background(MuralColor.orange, in: Capsule())
+                            .font(.headline).padding(18).frame(maxWidth: .infinity).foregroundStyle(MuralColor.onAccent).background(MuralColor.orange, in: Capsule())
                     }
                     Text("Search uses your OpenAI API account. Sources stay attached to the topic.").font(.footnote).foregroundStyle(MuralColor.secondary)
                 }.padding(26)
@@ -203,7 +203,7 @@ struct EditableTranscriptView: View {
         }.sheet(isPresented: Binding(get: { editingID != nil }, set: { if !$0 { editingID = nil } })) {
             NavigationStack {
                 VStack(alignment: .leading, spacing: 20) {
-                    TextField("What you said", text: $editedText, axis: .vertical).lineLimit(4...10).padding(18).background(.white, in: RoundedRectangle(cornerRadius: 20))
+                    TextField("What you said", text: $editedText, axis: .vertical).lineLimit(4...10).padding(18).background(MuralColor.surface, in: RoundedRectangle(cornerRadius: 20))
                     Text("Correct a misheard phrase. Learning evidence from the old wording will be removed; the original remains in your backup history.").font(.footnote).foregroundStyle(MuralColor.secondary)
                     Spacer()
                 }.padding(24).background(MuralColor.cream).navigationTitle("What you said").navigationBarTitleDisplayMode(.inline)

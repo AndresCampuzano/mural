@@ -117,7 +117,7 @@ struct SpendingView: View {
             .accessibilityIdentifier("spending-chart")
             Text("Tap a month to see its breakdown.").font(.caption2).foregroundStyle(MuralColor.secondary)
             }
-        }.padding(18).background(.white.opacity(0.7), in: RoundedRectangle(cornerRadius: 24))
+        }.padding(18).background(MuralColor.surface.opacity(0.7), in: RoundedRectangle(cornerRadius: 24))
     }
 
     private var breakdown: some View {
@@ -147,7 +147,7 @@ struct SpendingView: View {
                     Text("\(Int((row.amount / total * 100).rounded()))% of the month").font(.caption2).foregroundStyle(MuralColor.secondary)
                 }.accessibilityElement(children: .combine).accessibilityIdentifier("spending-row")
             }
-        }.padding(18).background(.white.opacity(0.7), in: RoundedRectangle(cornerRadius: 24))
+        }.padding(18).background(MuralColor.surface.opacity(0.7), in: RoundedRectangle(cornerRadius: 24))
     }
 
     // MARK: Billed data
@@ -211,7 +211,7 @@ struct SpendingView: View {
         VStack(alignment: .leading, spacing: 10) {
             SecureField(hasAdminKey ? "Replace Admin key" : "OpenAI Admin key", text: $adminKey)
                 .textInputAutocapitalization(.never).autocorrectionDisabled().privacySensitive()
-                .padding(14).background(.white, in: RoundedRectangle(cornerRadius: 16)).accessibilityIdentifier("admin-key")
+                .padding(14).background(MuralColor.surface, in: RoundedRectangle(cornerRadius: 16)).accessibilityIdentifier("admin-key")
             Button(hasAdminKey ? "Save replacement" : "Save Admin key") {
                 do {
                     try CredentialStore.save(adminKey, slot: .admin)
@@ -219,7 +219,7 @@ struct SpendingView: View {
                     Task { await load() }
                 } catch { keyMessage = error.localizedDescription }
             }.disabled(adminKey.isEmpty).font(.headline).padding(.vertical, 12).padding(.horizontal, 18)
-                .background(MuralColor.orange, in: Capsule()).contentShape(Capsule())
+                .foregroundStyle(MuralColor.onAccent).background(MuralColor.orange, in: Capsule()).contentShape(Capsule())
                 .accessibilityIdentifier("save-admin-key")
             if let keyMessage { Text(keyMessage).font(.footnote).foregroundStyle(MuralColor.secondary) }
         }

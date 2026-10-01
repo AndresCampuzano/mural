@@ -72,7 +72,7 @@ struct OnboardingView: View {
                 Button(step == 2 ? "Agree and continue" : "Continue") { advance() }
                     .font(.system(.headline, design: .rounded)).multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity).padding(.vertical, 19)
-                    .background(MuralColor.orange, in: Capsule())
+                    .foregroundStyle(MuralColor.onAccent).background(MuralColor.orange, in: Capsule())
                     .accessibilityIdentifier("onboarding-continue")
                 if !typeSize.isAccessibilitySize {
                     Text(step == 0 ? "We’ll find your pace through conversation."
@@ -128,7 +128,7 @@ struct OnboardingView: View {
                             Image(systemName: targetID == language.id ? "checkmark.circle.fill" : "circle")
                                 .font(.title3).foregroundStyle(targetID == language.id ? MuralColor.orange : MuralColor.secondary.opacity(0.4))
                         }.padding(.horizontal, 18).padding(.vertical, 13).frame(maxWidth: .infinity)
-                            .background(targetID == language.id ? .white.opacity(0.92) : .white.opacity(0.52), in: RoundedRectangle(cornerRadius: 22))
+                            .background(targetID == language.id ? MuralColor.surface.opacity(0.92) : MuralColor.surface.opacity(0.52), in: RoundedRectangle(cornerRadius: 22))
                             .overlay { RoundedRectangle(cornerRadius: 22).strokeBorder(targetID == language.id ? MuralColor.orange.opacity(0.55) : .clear, lineWidth: 1.5) }
                     }.buttonStyle(.plain)
                         .accessibilityLabel(language.settingsTitle)
@@ -165,7 +165,7 @@ struct OnboardingView: View {
                             Image(systemName: level == option ? "checkmark.circle.fill" : "circle")
                                 .font(.title3).foregroundStyle(level == option ? MuralColor.orange : MuralColor.secondary.opacity(0.4))
                         }.padding(.horizontal, 18).padding(.vertical, 13).frame(maxWidth: .infinity)
-                            .background(level == option ? .white.opacity(0.92) : .white.opacity(0.52), in: RoundedRectangle(cornerRadius: 22))
+                            .background(level == option ? MuralColor.surface.opacity(0.92) : MuralColor.surface.opacity(0.52), in: RoundedRectangle(cornerRadius: 22))
                             .overlay { RoundedRectangle(cornerRadius: 22).strokeBorder(level == option ? MuralColor.orange.opacity(0.55) : .clear, lineWidth: 1.5) }
                     }.buttonStyle(.plain)
                         .accessibilityLabel("\(option.title). \(option.detail(language: target, meaningLanguage: meaningLanguage))")
@@ -196,7 +196,7 @@ struct OnboardingView: View {
                 ForEach(MeaningLanguages.all, id: \.self) { Text($0).tag($0) }
             }.pickerStyle(.menu).font(.system(.headline, design: .rounded))
                 .padding(20).frame(maxWidth: .infinity)
-                .background(.white.opacity(0.8), in: RoundedRectangle(cornerRadius: 22))
+                .background(MuralColor.surface.opacity(0.8), in: RoundedRectangle(cornerRadius: 22))
                 .accessibilityIdentifier("onboarding-meaning-picker")
             VStack(spacing: 8) {
                 Text(target.greeting).font(.system(.title2, design: .rounded, weight: .medium))
@@ -260,7 +260,7 @@ struct AIConsentView: View {
                 .font(.subheadline).foregroundStyle(MuralColor.secondary)
             Link("Privacy policy", destination: URL(string: "https://mural.chat/privacy/")!).font(.subheadline).underline()
             Button("Agree and continue", action: agree).font(.headline).frame(maxWidth: .infinity).padding(18)
-                .background(MuralColor.orange, in: Capsule()).accessibilityIdentifier("ai-consent-agree")
+                .foregroundStyle(MuralColor.onAccent).background(MuralColor.orange, in: Capsule()).accessibilityIdentifier("ai-consent-agree")
             Button("Not now", action: decline).font(.subheadline).frame(maxWidth: .infinity)
                 .accessibilityIdentifier("ai-consent-decline")
         }.padding(28).foregroundStyle(MuralColor.ink).tint(MuralColor.ink)
