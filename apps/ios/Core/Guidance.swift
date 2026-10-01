@@ -6,7 +6,7 @@ import Foundation
 public enum GuidanceLevel: String, Codable, CaseIterable, Sendable, Identifiable {
     /// Mostly the learner's own language. Target phrases arrive one at a time, with their meaning.
     case startingOut = "starting-out"
-    /// Target language first, with a few words of support when something is new.
+    /// Target language for questions, examples and replies; explanations in the learner's own language.
     case findingMyFeet = "finding-my-feet"
     /// Target language only. This is how Mural behaved before levels existed.
     case inAtTheDeepEnd = "deep-end"
@@ -27,7 +27,7 @@ public enum GuidanceLevel: String, Codable, CaseIterable, Sendable, Identifiable
         case .startingOut:
             "Mural speaks \(meaningLanguage) and teaches \(language.name) one short phrase at a time."
         case .findingMyFeet:
-            "Simple \(language.name), with a few words of \(meaningLanguage) when something is new."
+            "Mural asks and answers in simple \(language.name), and explains things in \(meaningLanguage)."
         case .inAtTheDeepEnd:
             "\(language.name) only, at a natural pace."
         }
@@ -43,8 +43,27 @@ public enum GuidanceLevel: String, Codable, CaseIterable, Sendable, Identifiable
     }
 
     /// Detecting another language in Mural's own speech only means drift when the level
-    /// did not ask for that language in the first place.
-    public var expectsTargetLanguageThroughout: Bool { self != .startingOut }
+    /// did not ask for that language in the first place. Below the deep end, explanations are
+    /// meant to arrive in the learner's own language.
+    public var expectsTargetLanguageThroughout: Bool { self == .inAtTheDeepEnd }
+
+    /// The language Mural explains grammar, meaning and corrections in. Teachers of beginners
+    /// keep the target language for interaction and explain in the learner's own language, so an
+    /// explanation is never harder to follow than the question it leads to.
+    public func explanationLanguage(language: LanguageModule, meaningLanguage: String) -> String {
+        self == .inAtTheDeepEnd ? language.name : meaningLanguage
+    }
+
+    /// The highest stage of a module's `teachingFocus` Mural reaches for at this level. The
+    /// assessed challenge can rise with evidence, but a learner who asked for support should not
+    /// meet grammar from far beyond it.
+    public var maximumChallenge: Int {
+        switch self {
+        case .startingOut: 1
+        case .findingMyFeet: 2
+        case .inAtTheDeepEnd: 5
+        }
+    }
 }
 
 /// How quickly Mural speaks, as a multiple of the model's normal rate.
