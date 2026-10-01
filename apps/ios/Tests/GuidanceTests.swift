@@ -146,15 +146,51 @@ final class GuidanceTests: XCTestCase {
         }
     }
 
-    func testFindingMyFeetKeepsTheTargetLanguageLeadingWithBriefGlosses() {
+    func testFindingMyFeetAsksInTheTargetLanguageAndExplainsInTheLearnersOwn() {
         for language in LanguageRegistry.all {
-            let prompt = voice(.findingMyFeet, language: language)
-            XCTAssertTrue(prompt.contains("Speak \(language.name) by default"), language.id)
-            XCTAssertTrue(prompt.contains("give its meaning in \(meaning) in a few words"), language.id)
-            XCTAssertFalse(prompt.contains("Speak ONLY \(language.name)."), language.id)
-            XCTAssertTrue(TeachingPolicy.redirect(language: language, level: .findingMyFeet, meaningLanguage: meaning)
-                .contains("continue ONLY in \(language.name)"), language.id)
+            for meaning in ["English", "Spanish"] {
+                let prompt = TeachingPolicy.voice(language: language, learner: LearnerState(challenge: 0, observationCount: 0, nextGoal: "", capabilities: [], words: []),
+                                                  theme: nil, interests: "", meaningLanguage: meaning, level: .findingMyFeet)
+                let label = "\(language.id) \(meaning)"
+                XCTAssertTrue(prompt.contains("Use \(language.name) for the conversation itself"), label)
+                XCTAssertTrue(prompt.contains("cannot follow explanations in \(language.name). Explain in \(meaning)"), label)
+                XCTAssertTrue(prompt.contains("a very brief explanation in \(meaning)"), "corrections are explained in \(meaning): \(label)")
+                XCTAssertTrue(prompt.contains("never be harder than your questions"), label)
+                XCTAssertFalse(prompt.contains("Speak ONLY \(language.name)."), label)
+                XCTAssertTrue(TeachingPolicy.help(language: language, level: .findingMyFeet, meaningLanguage: meaning).contains("Explain the last idea in \(meaning)"), label)
+                XCTAssertTrue(TeachingPolicy.delegation(language: language, level: .findingMyFeet, meaningLanguage: meaning).contains("Explain in \(meaning)"), label)
+                XCTAssertTrue(TeachingPolicy.typedReply(language: language, level: .findingMyFeet, meaningLanguage: meaning).contains("explain it in \(meaning)"), label)
+                XCTAssertTrue(TeachingPolicy.redirect(language: language, level: .findingMyFeet, meaningLanguage: meaning)
+                    .contains("explanations stay brief and in \(meaning)"), label)
+            }
         }
+    }
+
+    func testOnlyTheDeepEndExplainsInTheTargetLanguageAndThenMoreSimply() {
+        for language in LanguageRegistry.all {
+            XCTAssertEqual(GuidanceLevel.inAtTheDeepEnd.explanationLanguage(language: language, meaningLanguage: "Polish"), language.name)
+            XCTAssertEqual(GuidanceLevel.findingMyFeet.explanationLanguage(language: language, meaningLanguage: "Polish"), "Polish")
+            XCTAssertEqual(GuidanceLevel.startingOut.explanationLanguage(language: language, meaningLanguage: "Polish"), "Polish")
+            let deep = voice(.inAtTheDeepEnd, language: language)
+            XCTAssertTrue(deep.contains("use simpler \(language.name) than the thing you are explaining"), language.id)
+            XCTAssertTrue(deep.contains("never answer confusion with a longer explanation"), language.id)
+        }
+    }
+
+    func testTheChosenLevelCapsHowHardTheTeachingFocusGets() {
+        let advanced = LearnerState(challenge: 5, observationCount: 20, nextGoal: "", capabilities: [], words: [])
+        for language in LanguageRegistry.all {
+            for level in GuidanceLevel.allCases {
+                let prompt = TeachingPolicy.voice(language: language, learner: advanced, theme: nil, interests: "", meaningLanguage: meaning, level: level)
+                let stage = TeachingPolicy.focusStage(advanced, level: level)
+                XCTAssertEqual(stage, min(5, level.maximumChallenge))
+                XCTAssertTrue(prompt.contains("Language-specific focus: \(language.teachingFocus[stage])"), "\(language.id) \(level.rawValue)")
+            }
+            XCTAssertFalse(TeachingPolicy.voice(language: language, learner: advanced, theme: nil, interests: "", meaningLanguage: meaning, level: .findingMyFeet)
+                .contains(language.teachingFocus[5]), "advanced grammar stays out of a supported level: \(language.id)")
+        }
+        XCTAssertLessThan(GuidanceLevel.startingOut.maximumChallenge, GuidanceLevel.findingMyFeet.maximumChallenge)
+        XCTAssertEqual(TeachingPolicy.focusStage(LearnerState(challenge: -3, observationCount: 0, nextGoal: "", capabilities: [], words: []), level: .inAtTheDeepEnd), 0)
     }
 
     func testThePaceIsAskedForInWordsAsWellAsSentToTheProvider() {
@@ -183,9 +219,11 @@ final class GuidanceTests: XCTestCase {
         }
     }
 
-    func testOnlyTheBeginnerLevelExpectsMuralToLeaveTheTargetLanguage() {
+    func testOnlyTheDeepEndExpectsMuralToStayInTheTargetLanguage() {
+        // Below the deep end, explanations arrive in the learner's own language on purpose, so the
+        // drift check must not pull Mural back mid-explanation.
         XCTAssertFalse(GuidanceLevel.startingOut.expectsTargetLanguageThroughout)
-        XCTAssertTrue(GuidanceLevel.findingMyFeet.expectsTargetLanguageThroughout)
+        XCTAssertFalse(GuidanceLevel.findingMyFeet.expectsTargetLanguageThroughout)
         XCTAssertTrue(GuidanceLevel.inAtTheDeepEnd.expectsTargetLanguageThroughout)
     }
 

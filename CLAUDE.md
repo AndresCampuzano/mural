@@ -89,10 +89,18 @@ A feature tested only against Korean is treated as untested.
 
 The learner picks a `GuidanceLevel` (`Core/Guidance.swift`) in onboarding and in Settings:
 `startingOut` speaks mainly the subtitle language and teaches one short phrase at a time,
-`findingMyFeet` leads in the target language with brief glosses, `inAtTheDeepEnd` is target
+`findingMyFeet` uses the target language for the conversation (questions, examples, replies)
+and explains meaning, grammar and corrections in the subtitle language, `inAtTheDeepEnd` is target
 language only. An absent or unrecognised stored value falls back to `inAtTheDeepEnd`, which is
 how Mural behaved before the setting existed, so old installs and old backups do not change.
 `TeachingPolicy` takes the level on every spoken prompt and defaults it to `inAtTheDeepEnd`.
+
+The rule behind every level: **an explanation is never harder than the question it leads to.**
+Teachers of beginners keep the target language for interaction and explain in the learner's own
+language; `GuidanceLevel.explanationLanguage` says which, and only the deep end explains in the
+target language, and then more simply than what it explains. `GuidanceLevel.maximumChallenge`
+caps the `teachingFocus` stage the voice prompt reaches for, so a learner who asked for support
+does not meet advanced grammar because the assessed challenge rose.
 
 `SpeechPace` maps four named paces onto the provider's `session.audio.output.speed`, which
 accepts 0.25–1.5, defaults to 1.0, and can only change between model turns — so Mural sends it
@@ -227,7 +235,7 @@ macrons. Say so rather than overselling it.
 - **A caption-sized `Label` inside a plain `Button` collapses to a hairline tap target.** It
   reports as hittable and the action silently never fires. Pad the label and give it
   `.contentShape(Rectangle())`. `ReadingHelp.swift` is the worked example.
-- **The beginner level makes Mural speak the learner's own language on purpose.** The
+- **The two supported levels make Mural speak the learner's own language on purpose.** The
   `NLLanguageRecognizer` drift check in `ConversationCoordinator.checkLanguage` must stay gated
   on `GuidanceLevel.expectsTargetLanguageThroughout`, or it redirects Mural back into the
   target language mid-explanation and the level silently stops working.

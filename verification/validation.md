@@ -617,3 +617,20 @@ a playback audio session before speaking and falls back to any installed voice f
 - **Not verified:** that the listen button now makes sound on the iPad. The audio-session change
   addresses the likely cause and has not been heard on a device. A live scan, test generation and
   model marking remain unverified, as before.
+
+## Explanations no harder than the question (30 September 2026)
+
+A beginner reported that Mural explained in long Korean with vocabulary they did not know, then
+asked an easy question. Research on teaching beginners consistently recommends the target language
+for interaction and the learner's own language, briefly, for explanations, grammar and feedback,
+with modelled answers and wait time. The prompts now follow that: *Finding my feet* asks and
+answers in simple target language and explains (meanings, grammar, corrections, help, delegated
+answers, typed replies) in the subtitle language; *In at the deep end* explains in simpler target
+language than what it explains. Every level asks Mural to make questions answerable with a
+modelled answer or two choices. The drift check now runs only at the deep end, because English
+explanations are intended below it. The teaching-focus stage is capped by level (1, 2, 5).
+
+- **142 core tests passed**, including new `GuidanceTests` that loop over `LanguageRegistry.all`
+  and two meaning languages.
+- **Not verified:** that conversations now feel easier to follow. These are model instructions;
+  only real conversations at each level can show whether the model follows them.

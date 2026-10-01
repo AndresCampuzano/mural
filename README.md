@@ -64,7 +64,7 @@ A free Personal Team can run the app on your own phone; TestFlight and App Store
 ## What works today
 
 - **A warm welcome:** choose a learning language, how much of it you want, and a subtitle language in three short screens, with a greeting that changes languages.
-- **Your level:** *Starting out* has Mural explain in your subtitle language and teach one short phrase at a time; *Finding my feet* keeps the target language leading with a few words of help; *In at the deep end* is target language only. Change it at any time in Settings; a running conversation follows immediately.
+- **Your level:** *Starting out* has Mural explain in your subtitle language and teach one short phrase at a time; *Finding my feet* asks and answers in simple target language and explains in your subtitle language; *In at the deep end* is target language only. Change it at any time in Settings; a running conversation follows immediately.
 - **Speaking pace:** slow, gentle, natural or brisk. The provider slows the generated voice, and Mural is asked to phrase things more slowly to match. A new pace applies to your next conversation.
 - **Conversation practice:** live voice, gentle corrections, optional meaning subtitles, word lookup, mute, and a typed reply when speaking is inconvenient.
 - **Saved phrases:** when Mural uses a phrase, tap it under the caption to keep it — or **Save all**. Kept phrases are read in the **Phrases** tab, the target language first with its meaning underneath. A notebook, not a measure of recall: saving does not change which words Mural brings back.
