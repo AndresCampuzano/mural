@@ -36,7 +36,7 @@ struct PhraseChips: View {
             }
             .padding(.horizontal, 16).padding(.vertical, 11)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(saved ? MuralColor.sage : MuralColor.butter, in: Self.shape)
+            .background(MuralColor.surface, in: Self.shape)
             .contentShape(Self.shape)
         }
         .buttonStyle(.plain)
@@ -55,7 +55,7 @@ struct PhraseChips: View {
             }
             .padding(.horizontal, 16).padding(.vertical, 11)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(MuralColor.peach, in: Self.shape)
+            .background(MuralColor.surface, in: Self.shape)
             .contentShape(Self.shape)
         }
         .buttonStyle(.plain)
@@ -104,7 +104,7 @@ struct PhrasesView: View {
                     Text("When Mural uses a \(coordinator.language.name) phrase, tap it under the caption to keep it here with its meaning.")
                         .font(.subheadline).foregroundStyle(MuralColor.secondary)
                 }.padding(26).frame(maxWidth: .infinity, alignment: .leading)
-                    .background(MuralColor.sage, in: RoundedRectangle(cornerRadius: 28))
+                    .background(MuralColor.surface, in: RoundedRectangle(cornerRadius: 28))
                     .accessibilityIdentifier("saved-phrases-empty")
             }.padding(26)
         }

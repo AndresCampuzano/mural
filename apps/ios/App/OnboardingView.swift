@@ -39,7 +39,7 @@ struct OnboardingView: View {
                 Spacer()
                 HStack(spacing: 6) {
                     ForEach(0..<3) { index in
-                        Capsule().fill(index == step ? MuralColor.accent : MuralColor.peach)
+                        Capsule().fill(index == step ? MuralColor.ink : MuralColor.selected)
                             .frame(width: index == step ? 24 : 8, height: 6)
                     }
                 }.accessibilityElement(children: .ignore).accessibilityLabel("Step \(step + 1) of 3")
@@ -126,10 +126,10 @@ struct OnboardingView: View {
                             }
                             Spacer()
                             Image(systemName: targetID == language.id ? "checkmark.circle.fill" : "circle")
-                                .font(.title3).foregroundStyle(targetID == language.id ? MuralColor.accent : MuralColor.secondary.opacity(0.4))
+                                .font(.title3).foregroundStyle(targetID == language.id ? MuralColor.ink : MuralColor.secondary.opacity(0.4))
                         }.padding(.horizontal, 18).padding(.vertical, 13).frame(maxWidth: .infinity)
-                            .background(targetID == language.id ? MuralColor.surface.opacity(0.92) : MuralColor.surface.opacity(0.52), in: RoundedRectangle(cornerRadius: 22))
-                            .overlay { RoundedRectangle(cornerRadius: 22).strokeBorder(targetID == language.id ? MuralColor.accent.opacity(0.55) : .clear, lineWidth: 1.5) }
+                            .background(targetID == language.id ? MuralColor.selected : MuralColor.surface, in: RoundedRectangle(cornerRadius: 22))
+                            .overlay { RoundedRectangle(cornerRadius: 22).strokeBorder(targetID == language.id ? MuralColor.ink.opacity(0.55) : .clear, lineWidth: 1.5) }
                     }.buttonStyle(.plain)
                         .accessibilityLabel(language.settingsTitle)
                         .accessibilityAddTraits(targetID == language.id ? .isSelected : [])
@@ -163,10 +163,10 @@ struct OnboardingView: View {
                             }
                             Spacer(minLength: 8)
                             Image(systemName: level == option ? "checkmark.circle.fill" : "circle")
-                                .font(.title3).foregroundStyle(level == option ? MuralColor.accent : MuralColor.secondary.opacity(0.4))
+                                .font(.title3).foregroundStyle(level == option ? MuralColor.ink : MuralColor.secondary.opacity(0.4))
                         }.padding(.horizontal, 18).padding(.vertical, 13).frame(maxWidth: .infinity)
-                            .background(level == option ? MuralColor.surface.opacity(0.92) : MuralColor.surface.opacity(0.52), in: RoundedRectangle(cornerRadius: 22))
-                            .overlay { RoundedRectangle(cornerRadius: 22).strokeBorder(level == option ? MuralColor.accent.opacity(0.55) : .clear, lineWidth: 1.5) }
+                            .background(level == option ? MuralColor.selected : MuralColor.surface, in: RoundedRectangle(cornerRadius: 22))
+                            .overlay { RoundedRectangle(cornerRadius: 22).strokeBorder(level == option ? MuralColor.ink.opacity(0.55) : .clear, lineWidth: 1.5) }
                     }.buttonStyle(.plain)
                         .accessibilityLabel("\(option.title). \(option.detail(language: target, meaningLanguage: meaningLanguage))")
                         .accessibilityAddTraits(level == option ? .isSelected : [])
@@ -196,7 +196,7 @@ struct OnboardingView: View {
                 ForEach(MeaningLanguages.all, id: \.self) { Text($0).tag($0) }
             }.pickerStyle(.menu).font(.system(.headline, design: .rounded))
                 .padding(20).frame(maxWidth: .infinity)
-                .background(MuralColor.surface.opacity(0.8), in: RoundedRectangle(cornerRadius: 22))
+                .background(MuralColor.surface, in: RoundedRectangle(cornerRadius: 22))
                 .accessibilityIdentifier("onboarding-meaning-picker")
             VStack(spacing: 8) {
                 Text(target.greeting).font(.system(.title2, design: .rounded, weight: .medium))
@@ -252,7 +252,7 @@ struct AIConsentView: View {
     let decline: () -> Void
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
-            Image(systemName: "waveform.bubble").font(.system(size: 32, weight: .light)).foregroundStyle(MuralColor.accent)
+            Image(systemName: "waveform.bubble").font(.system(size: 32, weight: .light)).foregroundStyle(MuralColor.ink)
             Text("Before we talk.").font(.system(.title, design: .rounded, weight: .semibold))
                 .accessibilityIdentifier("ai-consent-title")
             Text(AIProcessingConsent.summary).font(.body)
@@ -279,8 +279,8 @@ private struct OnboardingBackground: View {
                 [0, 0], [0.5, 0], [1, 0],
                 [0, 0.5], [Float(0.5 + sin(phase) * 0.12), Float(0.45 + cos(phase) * 0.1)], [1, 0.5],
                 [0, 1], [0.5, 1], [1, 1]
-            ], colors: [MuralColor.cream, MuralColor.butter.opacity(0.7), MuralColor.cream,
-                        MuralColor.cream, MuralColor.peach.opacity(0.75), MuralColor.lilac.opacity(0.45),
+            ], colors: [MuralColor.cream, MuralColor.surface.opacity(0.85), MuralColor.cream,
+                        MuralColor.cream, MuralColor.selected.opacity(0.65), MuralColor.surface.opacity(0.5),
                         MuralColor.cream, MuralColor.cream, MuralColor.cream])
         }.background(MuralColor.cream).ignoresSafeArea().accessibilityHidden(true)
     }

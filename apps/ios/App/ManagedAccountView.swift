@@ -19,7 +19,7 @@ struct ManagedAccountView: View {
                 if store.configuration == nil {
                     Text("Accounts aren’t available in this build yet. You can keep practising with your own OpenAI API key in Settings.")
                         .font(.body).multilineTextAlignment(.center)
-                        .padding(24).background(MuralColor.surface.opacity(0.7), in: RoundedRectangle(cornerRadius: 24))
+                        .padding(24).background(MuralColor.surface, in: RoundedRectangle(cornerRadius: 24))
                         .accessibilityIdentifier("managedAccountUnavailable")
                 } else if let session = store.session {
                     VStack(spacing: 16) {
@@ -33,7 +33,7 @@ struct ManagedAccountView: View {
                         Button("Refresh account", action: store.refresh).buttonStyle(.bordered)
                         Button("Sign out on all devices", action: store.signOut).buttonStyle(.bordered)
                         Button("Delete account", role: .destructive) { confirmDeletion = true }
-                    }.padding(24).background(MuralColor.surface.opacity(0.7), in: RoundedRectangle(cornerRadius: 24))
+                    }.padding(24).background(MuralColor.surface, in: RoundedRectangle(cornerRadius: 24))
                         .disabled(store.isBusy)
                 } else {
                     VStack(spacing: 14) {

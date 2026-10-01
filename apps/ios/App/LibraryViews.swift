@@ -20,7 +20,7 @@ struct ThemesView: View {
                 PageHeading(eyebrow: "A place to begin", title: "What’s on\nyour mind?", subtitle: "Same friend. Somewhere new.")
                 Button { choose(nil) } label: {
                     HStack { Image(systemName: "waveform"); Text("Just talk"); Spacer(); Image(systemName: "arrow.up.right") }
-                        .font(.headline).padding(22).background(MuralColor.surface.opacity(0.8), in: RoundedRectangle(cornerRadius: 26))
+                        .font(.headline).padding(22).foregroundStyle(MuralColor.onAccent).background(MuralColor.accent, in: RoundedRectangle(cornerRadius: 26))
                 }
                 if let course = coordinator.language.course {
                     CourseCard(course: course, language: coordinator.language) { choose($0) }
@@ -30,7 +30,7 @@ struct ThemesView: View {
                     HStack(spacing: 8) {
                         ForEach(categories, id: \.self) { c in
                             Button(c) { category = c }.font(.caption).padding(.horizontal, 15).padding(.vertical, 11)
-                                .background(category == c ? MuralColor.peach : MuralColor.surface.opacity(0.65), in: Capsule())
+                                .background(category == c ? MuralColor.selected : MuralColor.surface, in: Capsule())
                                 .accessibilityAddTraits(category == c ? .isSelected : [])
                         }
                     }
@@ -39,13 +39,13 @@ struct ThemesView: View {
                     ForEach(themes) { theme in
                         Button { if theme.id == "today" { current = true } else { choose(theme) } } label: {
                             VStack(alignment: .leading, spacing: 28) {
-                                Image(systemName: theme.symbol).font(.system(size: 28, weight: .regular)).foregroundStyle(MuralColor.icons[theme.colorIndex % MuralColor.icons.count])
+                                Image(systemName: theme.symbol).font(.system(size: 28, weight: .regular)).foregroundStyle(MuralColor.ink)
                                 VStack(alignment: .leading, spacing: 5) {
                                     Text(theme.title).font(.system(.headline, design: .rounded))
                                     Text(theme.subtitle).font(.caption).foregroundStyle(MuralColor.secondary)
                                 }
                             }.frame(maxWidth: .infinity, minHeight: 142, alignment: .leading).padding(19)
-                                .background(MuralColor.panels[theme.colorIndex], in: RoundedRectangle(cornerRadius: 27))
+                                .background(MuralColor.surface, in: RoundedRectangle(cornerRadius: 27))
                         }.buttonStyle(.plain)
                     }
                 }
@@ -72,7 +72,8 @@ struct CurrentTopicView: View {
                     PageHeading(eyebrow: "The world today", title: "A fresh conversation.", subtitle: "What would you like to talk about?")
                     TextField(coordinator.language.topicPlaceholder, text: $query, axis: .vertical).padding(18).background(MuralColor.surface, in: RoundedRectangle(cornerRadius: 20))
                     Button { find() } label: {
-                        HStack { Text(loading ? "Finding something interesting…" : "Find a topic"); Spacer(); if loading { ProgressView() } else { Image(systemName: "sparkle.magnifyingglass") } }.padding(18).background(MuralColor.peach, in: Capsule())
+                        HStack { Text(loading ? "Finding something interesting…" : "Find a topic"); Spacer(); if loading { ProgressView().tint(MuralColor.onAccent) } else { Image(systemName: "sparkle.magnifyingglass") } }.padding(18).foregroundStyle(brief == nil ? MuralColor.onAccent : MuralColor.ink)
+                            .background(brief == nil ? MuralColor.accent : MuralColor.surface, in: Capsule())
                     }.disabled(loading || query.trimmingCharacters(in: .whitespaces).isEmpty)
                     if let error { Text(error).font(.footnote).foregroundStyle(MuralColor.secondary) }
                     if let brief {

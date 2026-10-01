@@ -95,7 +95,7 @@ struct TalkView: View {
                 VStack(spacing: 0) {
                     Text(coordinator.selectedTheme?.title ?? coordinator.language.talkTitle)
                         .font(.system(.caption, design: .rounded, weight: .medium)).foregroundStyle(MuralColor.secondary)
-                        .padding(.horizontal, 14).padding(.vertical, 9).background(MuralColor.butter.opacity(0.58), in: Capsule()).padding(.top, 12)
+                        .padding(.horizontal, 14).padding(.vertical, 9).background(MuralColor.surface, in: Capsule()).padding(.top, 12)
                     Spacer(minLength: 8)
                     OrbPanel(coordinator: coordinator)
                     captionArea
@@ -135,7 +135,7 @@ struct TalkView: View {
                     Image(systemName: "chevron.right").font(.caption2)
                 }
                 .padding(.horizontal, 14).padding(.vertical, 9)
-                .background(MuralColor.sage, in: Capsule())
+                .background(MuralColor.surface, in: Capsule())
                 .contentShape(Capsule())
             }.buttonStyle(.plain).font(.footnote).foregroundStyle(MuralColor.ink)
                 .padding(.bottom, 12)
@@ -196,7 +196,7 @@ struct TalkView: View {
             Button { coordinator.toggleMeaning() } label: {
                 VStack(spacing: 6) {
                     Image(systemName: coordinator.store.preferences.meaningVisible ? "captions.bubble.fill" : "captions.bubble")
-                        .frame(width: 48, height: 48).modifier(SoftGlass(tint: coordinator.store.preferences.meaningVisible ? MuralColor.butter.opacity(0.7) : MuralColor.surface.opacity(0.4)))
+                        .frame(width: 48, height: 48).modifier(SoftGlass(tint: coordinator.store.preferences.meaningVisible ? MuralColor.selected.opacity(0.7) : MuralColor.surface.opacity(0.4)))
                     Text("Meaning").font(.caption2)
                 }.contentShape(Rectangle())
             }.buttonStyle(.plain)
@@ -207,10 +207,10 @@ struct TalkView: View {
                 else if !coordinator.isRunning { coordinator.start() }
             } label: {
                 ZStack {
-                    Circle().fill(LinearGradient(colors: [Color(white: 1), Color(white: 0.82)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                    Circle().fill(LinearGradient(colors: [MuralColor.accent.mix(with: .white, by: 0.12), MuralColor.accent.mix(with: .black, by: 0.12)], startPoint: .topLeading, endPoint: .bottomTrailing))
                     if coordinator.state == .connecting || coordinator.state == .closing { ProgressView().tint(MuralColor.onAccent) }
                     else { Image(systemName: coordinator.isMuted && coordinator.state == .active ? "mic.slash" : "mic").font(.system(size: 28, weight: .regular)).contentTransition(.symbolEffect(.replace)) }
-                }.foregroundStyle(MuralColor.onAccent).frame(width: 76, height: 76).shadow(color: MuralColor.accent.opacity(0.18), radius: 10, y: 6)
+                }.foregroundStyle(MuralColor.onAccent).frame(width: 76, height: 76).shadow(color: MuralColor.accent.opacity(0.35), radius: 12, y: 6)
             }.buttonStyle(.plain).padding(.bottom, 18)
                 .disabled(coordinator.state == .connecting || coordinator.state == .closing)
                 .accessibilityLabel(coordinator.state == .active ? (coordinator.isMuted ? "Unmute microphone" : "Mute microphone") : "Start conversation")

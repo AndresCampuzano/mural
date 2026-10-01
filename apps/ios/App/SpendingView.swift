@@ -24,7 +24,7 @@ struct SpendingView: View {
 
     private static let monthsShown = 6
     /// Greys far enough apart to tell the models apart in a black and white interface.
-    private static let palette: [Color] = [MuralColor.accent, Color(white: 0.7), Color(white: 0.5), Color(white: 0.36), Color(white: 0.25)]
+    private static let palette: [Color] = [Color(white: 0.96), Color(white: 0.7), Color(white: 0.5), Color(white: 0.36), Color(white: 0.25)]
     private var calendar: Calendar { .current }
     private var firstMonth: Date {
         let now = calendar.dateInterval(of: .month, for: .now)?.start ?? .now
@@ -88,7 +88,7 @@ struct SpendingView: View {
                 Text(loading ? "Fetching your costs…" : "Nothing recorded this month yet.").font(.footnote).foregroundStyle(MuralColor.secondary)
             }
         }.padding(22).frame(maxWidth: .infinity, alignment: .leading)
-            .background(MuralColor.peach.opacity(0.75), in: RoundedRectangle(cornerRadius: 26))
+            .background(MuralColor.surface, in: RoundedRectangle(cornerRadius: 26))
     }
 
     private var chart: some View {
@@ -116,7 +116,7 @@ struct SpendingView: View {
             .accessibilityIdentifier("spending-chart")
             Text("Tap a month to see its breakdown.").font(.caption2).foregroundStyle(MuralColor.secondary)
             }
-        }.padding(18).background(MuralColor.surface.opacity(0.7), in: RoundedRectangle(cornerRadius: 24))
+        }.padding(18).background(MuralColor.surface, in: RoundedRectangle(cornerRadius: 24))
     }
 
     private var breakdown: some View {
@@ -146,7 +146,7 @@ struct SpendingView: View {
                     Text("\(Int((row.amount / total * 100).rounded()))% of the month").font(.caption2).foregroundStyle(MuralColor.secondary)
                 }.accessibilityElement(children: .combine).accessibilityIdentifier("spending-row")
             }
-        }.padding(18).background(MuralColor.surface.opacity(0.7), in: RoundedRectangle(cornerRadius: 24))
+        }.padding(18).background(MuralColor.surface, in: RoundedRectangle(cornerRadius: 24))
     }
 
     // MARK: Billed data
@@ -168,7 +168,7 @@ struct SpendingView: View {
             Button { Task { await load() } } label: { Image(systemName: "arrow.clockwise").padding(8).contentShape(Rectangle()) }
                 .disabled(loading).accessibilityLabel("Refresh billed costs")
         }.overlay(alignment: .bottomLeading) {
-            if let error { Text(error).font(.footnote).foregroundStyle(MuralColor.accent).offset(y: 28) }
+            if let error { Text(error).font(.footnote).foregroundStyle(MuralColor.ink).offset(y: 28) }
         }.padding(.bottom, error == nil ? 0 : 28)
     }
 
@@ -201,7 +201,7 @@ struct SpendingView: View {
             Text("It stays in this iPhone’s Keychain, never syncs or leaves in a backup, and is sent only to api.openai.com to read costs. Until then, “Estimated here” shows Mural’s own figures.")
                 .font(.footnote).foregroundStyle(MuralColor.secondary)
         }.padding(22).frame(maxWidth: .infinity, alignment: .leading)
-            .background(MuralColor.sage, in: RoundedRectangle(cornerRadius: 26))
+            .background(MuralColor.surface, in: RoundedRectangle(cornerRadius: 26))
             // A container, so the field and button inside stay separate accessibility elements.
             .accessibilityElement(children: .contain).accessibilityIdentifier("spending-admin-card")
     }
@@ -210,7 +210,7 @@ struct SpendingView: View {
         VStack(alignment: .leading, spacing: 10) {
             SecureField(hasAdminKey ? "Replace Admin key" : "OpenAI Admin key", text: $adminKey)
                 .textInputAutocapitalization(.never).autocorrectionDisabled().privacySensitive()
-                .padding(14).background(MuralColor.surface, in: RoundedRectangle(cornerRadius: 16)).accessibilityIdentifier("admin-key")
+                .padding(14).background(MuralColor.raised, in: RoundedRectangle(cornerRadius: 16)).accessibilityIdentifier("admin-key")
             Button(hasAdminKey ? "Save replacement" : "Save Admin key") {
                 do {
                     try CredentialStore.save(adminKey, slot: .admin)
