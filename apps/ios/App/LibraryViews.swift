@@ -105,31 +105,20 @@ struct SourcesView: View {
     }
 }
 
-struct TranscriptView: View {
-    let session: SessionRecord?
-    var meaningLanguage = "English"
+/// The topics Mural found for the conversation on the Talk screen, with their sources, so a
+/// claim it makes about current events can be checked. The whole conversation is read in
+/// Settings, under Past conversations.
+struct TopicSourcesView: View {
+    let topics: [TopicBrief]
     @Environment(\.dismiss) private var dismiss
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    if let session {
-                        ForEach(session.passages) { passage in
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text(passage.speaker == .assistant ? "MURAL" : "YOU").font(.caption).tracking(1).foregroundStyle(MuralColor.secondary)
-                                Text(passage.text).font(.system(.title3, design: .rounded)).textSelection(.enabled)
-                                if let module = LanguageRegistry.module(for: session.languageID) { ReadingHelp(text: passage.text, language: module) }
-                                if let translation = session.translations[MeaningRequest.cacheKey(revisionKey: passage.revisionKey, language: meaningLanguage)] ?? session.translations[passage.revisionKey] {
-                                    Text(translation).font(.subheadline).foregroundStyle(MuralColor.secondary)
-                                }
-                            }.frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        ForEach(session.topics) { topic in Text(.init(topic.text)); SourcesView(sources: topic.sources, date: topic.retrievedAt) }
-                        if session.fragments.isEmpty && session.topics.isEmpty { Text("Your conversation will appear here.").foregroundStyle(MuralColor.secondary) }
-                    } else { Text("Start a conversation and your words will appear here.") }
-                }.padding(26)
+                    ForEach(topics) { topic in Text(.init(topic.text)); SourcesView(sources: topic.sources, date: topic.retrievedAt) }
+                }.padding(26).frame(maxWidth: .infinity, alignment: .leading)
             }.background(MuralColor.cream).foregroundStyle(MuralColor.ink)
-                .navigationTitle("Our conversation").navigationBarTitleDisplayMode(.inline)
+                .navigationTitle("Sources").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }
     }
@@ -252,7 +241,7 @@ struct SettingsView: View {
                     TextField("A few things you enjoy", text: Binding(get: { store.preferences.interests }, set: { value in store.updatePreferences { $0.interests = String(value.prefix(500)) } }), axis: .vertical)
                 } header: { Text("Just your pace") } footer: {
                     Text((coordinator.isRunning ? "End this conversation to switch languages. Each language keeps its own words and progress." : "Each language keeps its own words and progress. Mural finds your pace through conversation.")
-                         + " Your level applies straight away. A new speaking pace starts with your next conversation: it slows the voice you hear, and asks Mural to phrase things more slowly too.")
+                         + " Your level and speaking pace apply straight away. The pace is a request to Mural, not a change to the voice's speed, so how closely it is followed can vary.")
                 }
                 if ManagedAccountConfiguration.load() != nil {
                     Section {

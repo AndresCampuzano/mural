@@ -86,9 +86,13 @@ struct TalkView: View {
     /// Opens the kept phrases, so the confirmation after saving one leads somewhere.
     var showPhrases: () -> Void = {}
     @Environment(\.dynamicTypeSize) private var typeSize
-    @State private var typing = false
-    @State private var transcript: SessionRecord?
+    /// The conversation the open Sources sheet was taken from, kept so it stays readable if the
+    /// screen resets underneath it.
+    @State private var sourcesSession: SessionRecord?
     @State private var lookup: WordLookup?
+    /// A conversation, running or just ended, is read over the figure instead of below it, so the
+    /// figure keeps its full size and the words get the whole stage.
+    private var conversing: Bool { coordinator.session != nil }
     var body: some View {
         GeometryReader { geometry in
             ScrollView {
@@ -96,34 +100,52 @@ struct TalkView: View {
                     Text(coordinator.selectedTheme?.title ?? coordinator.language.talkTitle)
                         .font(.system(.caption, design: .rounded, weight: .medium)).foregroundStyle(MuralColor.secondary)
                         .padding(.horizontal, 14).padding(.vertical, 9).background(MuralColor.surface, in: Capsule()).padding(.top, 12)
-                    Spacer(minLength: 8)
-                    OrbPanel(coordinator: coordinator)
-                    captionArea
-                    Spacer(minLength: 12)
+                    stage
+                    StatusLine(coordinator: coordinator)
                     controls
                     Text(coordinator.microphoneLabel).font(.caption2).foregroundStyle(MuralColor.secondary).padding(.top, 10)
                         .accessibilityIdentifier("microphone-status")
-                    HStack(spacing: 24) {
-                        if coordinator.state == .active {
-                            Button("Type instead", systemImage: "keyboard") { typing = true }
-                            Button("A little help", systemImage: "sparkles") { coordinator.help() }
-                        } else if coordinator.session == nil {
-                            Text("Reply in whichever language comes to you.").foregroundStyle(MuralColor.secondary)
-                        } else if !coordinator.isRunning {
+                    Group {
+                        if conversing && !coordinator.isRunning {
                             Button("New conversation", systemImage: "arrow.counterclockwise") { coordinator.resetConversation() }
                                 .accessibilityIdentifier("new-conversation")
+                        } else {
+                            Text("Reply in whichever language comes to you.").foregroundStyle(MuralColor.secondary)
                         }
                     }.font(.caption).padding(.top, 6).padding(.bottom, 12)
                     if let notice = coordinator.notice { noticeView(notice) }
                 }.padding(.horizontal, 30).frame(maxWidth: .infinity).frame(minHeight: geometry.size.height)
             }.scrollIndicators(.hidden)
+                // The conversation scrolls inside the stage. The page itself only needs to at the
+                // accessibility sizes, where the controls may not fit under a full-size figure.
+                .scrollDisabled(conversing && !typeSize.isAccessibilitySize)
         }
-        .sheet(isPresented: $typing) { TypedReplyView(coordinator: coordinator) }
         .animation(.smooth(duration: 0.35), value: coordinator.state)
-        .sheet(item: $transcript) { session in
-            TranscriptView(session: session, meaningLanguage: coordinator.store.preferences.meaningLanguage)
-        }
+        .animation(.smooth(duration: 0.45), value: conversing)
+        .sheet(item: $sourcesSession) { session in TopicSourcesView(topics: session.topics) }
         .sheet(item: $lookup) { item in LookupView(item: item, coordinator: coordinator) }
+    }
+    /// The figure, with the greeting under it until a conversation starts. Then the figure stays
+    /// where it is at full size, blurred and dimmed so it reads as a backdrop, and the conversation
+    /// fills the stage in front of it.
+    private var stage: some View {
+        VStack(spacing: 0) {
+            Spacer(minLength: 8)
+            OrbPanel(coordinator: coordinator)
+                .blur(radius: conversing ? 7 : 0)
+                .opacity(conversing ? 0.6 : 1)
+            if !conversing { captionArea }
+            Spacer(minLength: 12)
+        }
+        .overlay { if conversing { conversation } }
+    }
+    private var conversation: some View {
+        GeometryReader { geometry in
+            ScrollView {
+                captionArea.padding(.vertical, 16)
+                    .frame(maxWidth: .infinity, minHeight: geometry.size.height)
+            }.scrollIndicators(.hidden).scrollBounceBehavior(.basedOnSize)
+        }.transition(.opacity)
     }
     /// A notice that leads somewhere is a control, not a sentence. A footnote-sized label in a
     /// plain button collapses to a hairline tap target, so it is padded and given its own shape.
@@ -174,7 +196,7 @@ struct TalkView: View {
             }
             if coordinator.working { ProgressView("Checking that for you…").font(.caption).tint(MuralColor.secondary) }
             if let sources = coordinator.session?.topics.last?.sources, !sources.isEmpty {
-                Button("Sources", systemImage: "link") { transcript = coordinator.session }.font(.caption)
+                Button("Sources", systemImage: "link") { sourcesSession = coordinator.session }.font(.caption)
             }
         }.frame(minHeight: typeSize.isAccessibilitySize ? 100 : 105).frame(maxWidth: .infinity)
     }
@@ -215,44 +237,46 @@ struct TalkView: View {
                 .disabled(coordinator.state == .connecting || coordinator.state == .closing)
                 .accessibilityLabel(coordinator.state == .active ? (coordinator.isMuted ? "Unmute microphone" : "Mute microphone") : "Start conversation")
                 .accessibilityIdentifier("start-conversation")
-            Button { if coordinator.isRunning { coordinator.end() } else { transcript = coordinator.session } } label: {
+            // Only a running conversation can be ended. The slot stays when there is none, so the
+            // microphone keeps its place in the middle.
+            Button { coordinator.end() } label: {
                 VStack(spacing: 6) {
-                    Image(systemName: coordinator.isRunning ? "phone.down" : "text.bubble").frame(width: 48, height: 48).modifier(SoftGlass())
-                    Text(coordinator.isRunning ? "End" : "Transcript").font(.caption2)
+                    Image(systemName: "phone.down").frame(width: 48, height: 48).modifier(SoftGlass())
+                    Text("End").font(.caption2)
                 }.contentShape(Rectangle())
-            }.buttonStyle(.plain).accessibilityLabel(coordinator.isRunning ? "End conversation" : "Conversation transcript")
-                .disabled(coordinator.session == nil)
+            }.buttonStyle(.plain).accessibilityLabel("End conversation")
+                .opacity(coordinator.isRunning ? 1 : 0).disabled(!coordinator.isRunning).accessibilityHidden(!coordinator.isRunning)
         }.foregroundStyle(MuralColor.ink)
     }
 }
 
-/// The orb and the status line are the only parts of the talk screen that follow the audio
-/// levels, which arrive several times a second. They read them here rather than in `TalkView`,
-/// so a level change redraws the orb instead of the whole screen.
+/// The orb is the only part of the talk screen that follows the audio levels, which arrive
+/// several times a second. It reads them here rather than in `TalkView`, so a level change
+/// redraws the orb instead of the whole screen.
 private struct OrbPanel: View {
     let coordinator: ConversationCoordinator
     @Environment(\.dynamicTypeSize) private var typeSize
-    /// Full size while the orb is the whole screen, and smaller once a conversation is running,
-    /// where the caption and the phrases worth keeping need the room more than it does.
+    /// One size whether or not a conversation is running: the conversation is drawn over the
+    /// figure rather than squeezed in below it.
     private var size: CGSize {
         // A landmark is a whole scene rather than a single shape, so it is given more room.
         let scale: CGFloat = coordinator.language.landmarkID.flatMap { Landmarks.all[$0] } == nil ? 1 : 1.3
-        let base: CGSize = switch (coordinator.isRunning, typeSize.isAccessibilitySize) {
-        case (true, true): CGSize(width: 120, height: 128)
-        case (true, false): CGSize(width: 150, height: 152)
-        case (false, true): CGSize(width: 170, height: 180)
-        case (false, false): CGSize(width: 220, height: 222)
-        }
+        let base = typeSize.isAccessibilitySize ? CGSize(width: 170, height: 180) : CGSize(width: 220, height: 222)
         return CGSize(width: base.width * scale, height: base.height * scale)
     }
     var body: some View {
-        VStack(spacing: 0) {
-            LanguageFigure(language: coordinator.language, energy: max(coordinator.outputLevel, coordinator.inputLevel * 0.45), listening: coordinator.state == .active && !coordinator.isMuted, active: coordinator.state != .closing)
-                .frame(width: size.width, height: size.height).padding(.vertical, 8)
-            Text(coordinator.status).font(.system(.caption, design: .rounded)).foregroundStyle(MuralColor.secondary)
-                .contentTransition(.numericText()).padding(.top, 6).padding(.bottom, 16).accessibilityAddTraits(.updatesFrequently)
-                .accessibilityIdentifier("conversation-status")
-        }
+        LanguageFigure(language: coordinator.language, energy: max(coordinator.outputLevel, coordinator.inputLevel * 0.45), listening: coordinator.state == .active && !coordinator.isMuted, active: coordinator.state != .closing)
+            .frame(width: size.width, height: size.height).padding(.vertical, 8)
+    }
+}
+
+/// What Mural is doing, under the stage so the conversation never covers it.
+private struct StatusLine: View {
+    let coordinator: ConversationCoordinator
+    var body: some View {
+        Text(coordinator.status).font(.system(.caption, design: .rounded)).foregroundStyle(MuralColor.secondary)
+            .contentTransition(.numericText()).padding(.bottom, 14).accessibilityAddTraits(.updatesFrequently)
+            .accessibilityIdentifier("conversation-status")
     }
 }
 
@@ -276,26 +300,5 @@ struct LookupView: View {
                 .navigationTitle("A little meaning").navigationBarTitleDisplayMode(.inline)
         }.presentationDetents([.medium, .large])
             .task { do { explanation = try await coordinator.lookup(word: item.word, sentence: item.sentence) } catch { self.error = error.localizedDescription } }
-    }
-}
-
-struct TypedReplyView: View {
-    let coordinator: ConversationCoordinator
-    @State private var text = ""
-    @State private var sending = false
-    @Environment(\.dismiss) private var dismiss
-    @FocusState private var focused: Bool
-    var body: some View {
-        NavigationStack {
-            VStack(alignment: .leading, spacing: 20) {
-                Text("Say it your way.").font(.system(.title, design: .rounded, weight: .semibold))
-                TextField("Reply in \(coordinator.language.name) or another language", text: $text, axis: .vertical).lineLimit(3...6).focused($focused).padding(18).background(MuralColor.surface, in: RoundedRectangle(cornerRadius: 22))
-                Button { sending = true; Task { await coordinator.sendTyped(text); sending = false; dismiss() } } label: {
-                    HStack { Text(sending ? "Sending…" : "Send reply"); Spacer(); Image(systemName: "arrow.up") }.padding(18).foregroundStyle(MuralColor.onAccent).background(MuralColor.accent, in: Capsule())
-                }.disabled(sending || text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                Spacer()
-            }.padding(26).foregroundStyle(MuralColor.ink).background(MuralColor.cream)
-                .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } } }
-        }.presentationDetents([.medium, .large]).onAppear { focused = true }
     }
 }

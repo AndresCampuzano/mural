@@ -114,19 +114,15 @@ final class MuralUITests: XCTestCase {
         XCTAssertEqual(app.staticTexts["meaning-caption"].label, "你好！")
     }
 
-    func testJapaneseTranscriptRetainsSourceTextAndRomajiAfterReset() {
+    func testJapaneseCaptionKeepsRomajiAndReachesPastConversationsAfterReset() {
         let app = XCUIApplication()
         app.launchArguments = ["--preview", "--ended-conversation", "--preview-language=ja"]
         app.launch()
         XCTAssertTrue(app.buttons["new-conversation"].waitForExistence(timeout: 10))
         XCTAssertEqual(app.staticTexts["target-caption"].label, "コーヒーが好きです。")
         XCTAssertEqual(app.staticTexts.matching(identifier: "reading-text").firstMatch.label, "kōhī ga suki desu。")
-        app.buttons["Conversation transcript"].tap()
-        XCTAssertTrue(app.staticTexts["コーヒーが好きです。"].exists)
-        XCTAssertEqual(app.staticTexts.matching(identifier: "reading-text").firstMatch.label, "kōhī ga suki desu。")
         let screen = XCTAttachment(screenshot: app.screenshot())
-        screen.name = "Japanese transcript and romaji"; screen.lifetime = .keepAlways; add(screen)
-        app.buttons["Done"].tap()
+        screen.name = "Japanese caption and romaji"; screen.lifetime = .keepAlways; add(screen)
         app.buttons["new-conversation"].tap()
         XCTAssertEqual(app.staticTexts["target-caption"].label, "こんにちは！")
         openPastConversations(app)
@@ -487,7 +483,8 @@ final class MuralUITests: XCTestCase {
         XCTAssertTrue(app.buttons["new-conversation"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["new-conversation"].isHittable)
         XCTAssertTrue(app.buttons["start-conversation"].isHittable)
-        XCTAssertTrue(app.buttons["Conversation transcript"].isHittable)
+        XCTAssertFalse(app.buttons["Conversation transcript"].exists)
+        XCTAssertFalse(app.buttons["End conversation"].exists)
         XCTAssertEqual(app.staticTexts["meaning-caption"].label, "I like coffee.")
         app.buttons["Hide meaning subtitles"].coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.93)).tap()
         XCTAssertFalse(app.staticTexts["meaning-caption"].exists)
@@ -589,17 +586,27 @@ final class MuralUITests: XCTestCase {
         XCTAssertFalse(app.buttons["new-conversation"].exists)
     }
 
-    func testOpenTranscriptRemainsReadableAfterAutomaticReset() {
-        let app = launch(ended: true)
-        XCTAssertTrue(app.buttons["new-conversation"].waitForExistence(timeout: 5))
-        app.buttons["Conversation transcript"].tap()
-        XCTAssertTrue(app.staticTexts["I like coffee."].exists)
-        let delay = expectation(description: "Allow the 15-second reset to finish")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 16) { delay.fulfill() }
-        waitForExpectations(timeout: 18)
-        XCTAssertTrue(app.staticTexts["저는 커피를 좋아해요."].exists)
-        XCTAssertTrue(app.staticTexts["I like coffee."].exists)
-        app.buttons["Done"].tap()
-        XCTAssertEqual(app.staticTexts["target-caption"].label, "안녕하세요!")
+    /// A conversation is read over the landmark, which keeps the size it has on the greeting, and
+    /// typing, asking for help and the transcript are no longer offered on the Talk screen.
+    func testConversationIsReadOverAFullSizeLandmarkInEveryLanguage() {
+        for id in ["ko", "ja"] {
+            let app = XCUIApplication(); app.launchArguments = ["--preview", "--ended-conversation", "--preview-language=\(id)"]
+            app.launch()
+            XCTAssertTrue(app.buttons["new-conversation"].waitForExistence(timeout: 10), id)
+            let landmark = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "landmark-")).firstMatch
+            XCTAssertTrue(landmark.exists, id)
+            let conversingSize = landmark.frame.size
+            XCTAssertTrue(app.staticTexts["target-caption"].isHittable, id)
+            XCTAssertTrue(app.staticTexts["meaning-caption"].isHittable, id)
+            for gone in ["Type instead", "A little help", "Conversation transcript"] { XCTAssertFalse(app.buttons[gone].exists, "\(id) \(gone)") }
+            let screen = XCTAttachment(screenshot: app.screenshot())
+            screen.name = "Conversation over the landmark - \(id)"; screen.lifetime = .keepAlways; add(screen)
+            app.buttons["new-conversation"].tap()
+            XCTAssertFalse(app.buttons["new-conversation"].waitForExistence(timeout: 2), id)
+            // The figure moves as the greeting takes its place under it, so allow for pixel rounding.
+            XCTAssertEqual(landmark.frame.width, conversingSize.width, accuracy: 1, id)
+            XCTAssertEqual(landmark.frame.height, conversingSize.height, accuracy: 1, id)
+            app.terminate()
+        }
     }
 }

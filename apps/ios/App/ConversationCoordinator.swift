@@ -156,15 +156,10 @@ import MuralCore
         let history: [[String: Any]] = []
         let instructions = TeachingPolicy.voice(language: language, learner: learner, theme: selectedTheme, interests: store.preferences.interests,
                                                 meaningLanguage: store.preferences.meaningLanguage, level: guidanceLevel, pace: pace)
-        let speed = practicePace?.speed ?? store.preferences.speed
         connectionTask = Task { [weak self] in
             guard let self else { return }
             do {
-                try await self.transport.connect(api: self.api, instructions: instructions, history: history, speed: speed)
-                if !self.transport.paceApplied, self.session?.id == generation {
-                    let reason = self.transport.paceRejection.map { " OpenAI said: \($0)" } ?? ""
-                    self.notice = "Mural is speaking at its normal speed: the voice model didn’t accept the pace setting.\(reason)"
-                }
+                try await self.transport.connect(api: self.api, instructions: instructions, history: history)
             }
             catch is CancellationError { return }
             catch {
@@ -209,14 +204,15 @@ import MuralCore
         append("instructions", TeachingPolicy.levelChange(language: language, level: level, meaningLanguage: store.preferences.meaningLanguage))
         notice = "Mural will follow your new level from here."
     }
-    /// The provider only accepts a speaking speed when a session is created, so a change during
-    /// a conversation waits for the next one.
+    /// The pace is asked for in words, so the running conversation can adopt it at once, like the level.
     func selectSpeechPace(_ pace: SpeechPace) {
         let current = self.pace
         practicePace = nil
         if pace != store.preferences.pace { store.updatePreferences { $0.speechSpeed = pace.speed } }
         guard pace != current else { return }
-        if isRunning { notice = "Mural will speak at that pace in your next conversation." }
+        guard state == .active else { return }
+        append("instructions", TeachingPolicy.paceChange(pace))
+        notice = "Mural will try to speak at that pace from here."
     }
     func selectMeaningLanguage(_ value: String) {
         guard MeaningLanguages.all.contains(value) else { return }
@@ -249,11 +245,6 @@ import MuralCore
         store.updatePreferences { $0.meaningVisible.toggle() }
         if store.preferences.meaningVisible { scheduleTranslation() }
         else { meanings.reset() }
-    }
-    func help() {
-        guard state == .active else { return }
-        append("instructions", TeachingPolicy.help(language: language, level: guidanceLevel, meaningLanguage: store.preferences.meaningLanguage))
-        notice = "Mural will make that a little simpler."
     }
     func end(reason: String = "Ended by you") {
         guard state == .active || state == .connecting else { return }
@@ -556,6 +547,9 @@ import MuralCore
             }
         }
     }
+    #if DEBUG
+    /// A typed turn, for the device verification harnesses only: they script replies without a
+    /// microphone. The interface no longer offers typing, so release builds leave this out.
     func sendTyped(_ text: String) async {
         let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard state == .active, !clean.isEmpty, let snapshot = session else { return }
@@ -572,6 +566,7 @@ import MuralCore
             append("commentary", result.text); scheduleAssessment(); save()
         } catch { if session?.id == snapshot.id { self.error = error.localizedDescription } }
     }
+    #endif
     func lookup(word: String, sentence: String) async throws -> String {
         guard hasAIConsent else { throw AIProcessingConsent.ConsentError.required }
         let generation = languageGeneration, sessionID = session?.id

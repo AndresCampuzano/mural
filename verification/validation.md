@@ -746,3 +746,56 @@ the scene risen.
   most of it the grass mesh. A Release build should be faster; not measured on a device.
 - **Not measured:** frame time, battery or thermal cost of the denser grass and foliage on a
   device.
+
+## A conversation over a full-size landmark; no typing, help or transcript on Talk (1 October 2026)
+
+The Talk screen no longer shrinks the landmark when a conversation starts. The figure keeps the
+size it has on the greeting, and while a conversation is running or just ended the caption,
+meaning, phrase rows and the learner's last line fill the stage in front of it, scrolling there
+if they run long. The figure behind them is blurred (radius 7) and dimmed to 60 per cent, so the
+words read against it. The status line moved below the stage, above the controls, so the words
+never cover it.
+
+**Type instead**, **A little help** and the **Transcript** button are gone from the Talk screen.
+The End slot is hidden, not removed, when nothing is running, so the microphone stays centred.
+`TeachingPolicy.help` and its assertions went with the help button. `sendTyped` and
+`TeachingPolicy.typedReply` stay, compiled into Debug builds only, because the device verification
+harnesses drive typed turns. The live transcript sheet became `TopicSourcesView`, which the
+Sources button still opens for a found topic. Past conversations in Settings are unchanged.
+
+- **143 core tests passed**, with the help-prompt assertions removed from `GuidanceTests` and `LanguageTests`.
+- Talk on an iPhone 17 simulator checked by screenshot at the greeting, mid-conversation and
+  after ending: the pavilion stays at full size and is recognisable behind the blur; the caption and
+  meaning read clearly over it.
+- UI test `testConversationIsReadOverAFullSizeLandmarkInEveryLanguage` checks, for Korean and
+  Japanese, that the landmark's frame is the same in a conversation and at the greeting and that
+  the removed buttons are absent. The two transcript tests were removed or reduced to what is left.
+- **UI suite on an iPhone 17 simulator: 26 tests.** On the first run 25 passed and the new test failed
+  on a 0.33-point difference in the landmark's height, pixel rounding after the figure moves when the
+  greeting takes its place; it now compares within one point and passed when run again on its own.
+- **Not measured:** the extra cost on a device of blurring a 30 fps SceneKit view for a whole
+  conversation.
+
+
+## GPT-Live has no speed setting; the pace is an instruction (1 October 2026)
+
+This settles the open question from "HTTP 400 on the first live conversation". Starting a
+conversation at any pace but Natural, the owner's phone showed the fallback notice with OpenAI's
+reason: `Unknown parameter: 'session.audio.output.speed'`. OpenAI's GPT-Live guide documents only
+`voice` under `session.audio.output`, and `session.update` cannot change audio settings. So every
+non-natural pace has always fallen back to the normal speed, and the retry made each such start
+cost an extra request.
+
+`LiveTransport` now creates the session with the voice alone and has no retry or pace flags; the
+notice is gone. The pace still reaches Mural in words, as it always did alongside the field. A pace
+chosen during a conversation is now appended at once with `TeachingPolicy.paceChange`, the same
+rule the opening prompt carries, instead of waiting for the next conversation. The Settings footer
+says the pace is a request to Mural rather than a change to the voice's speed. `SpeechPace.speed`
+stays as the stored value and still sets the system voice that reads scans aloud.
+
+- **144 core tests passed**, including the new check that a pace change carries the opening
+  prompt's rule for every module and names no language.
+- Simulator and device builds succeeded; installed on the iPhone and the iPad.
+- **Not verified:** whether a live conversation now starts without the notice (the next start on
+  the phone decides it), and how closely GPT-Live follows a spoken-pace instruction. No live
+  conversation was held from this machine.

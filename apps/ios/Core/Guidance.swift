@@ -66,13 +66,12 @@ public enum GuidanceLevel: String, Codable, CaseIterable, Sendable, Identifiable
     }
 }
 
-/// How quickly Mural speaks, as a multiple of the model's normal rate.
+/// How quickly Mural speaks.
 ///
-/// The provider applies this to the generated audio after the fact, so it changes playback
-/// rate rather than how the model composes speech; `TeachingPolicy` asks for matching pacing
-/// in words as well. Accepted range is 0.25–1.5, and the value can only change between turns,
-/// so Mural sets it when a conversation starts.
-/// https://developers.openai.com/api/reference/resources/realtime/client-events
+/// GPT-Live has no speed setting for its voice, so the conversation pace is an instruction
+/// (`TeachingPolicy`) and the model decides how well it follows it. `speed` is kept as the
+/// stored form of the choice, so older backups still decode, and sets the rate of the system
+/// voice that reads scans aloud. It stays within 0.25–1.5.
 public enum SpeechPace: String, Codable, CaseIterable, Sendable, Identifiable {
     case slow, gentle, natural, brisk
 

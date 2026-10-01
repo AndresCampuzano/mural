@@ -99,7 +99,6 @@ final class GuidanceTests: XCTestCase {
                 .contains("ONLY in \(language.name)"))
             // The defaulted argument is the same prompt, so untouched call sites keep their behaviour.
             XCTAssertEqual(TeachingPolicy.greeting(language: language), TeachingPolicy.greeting(language: language, level: .inAtTheDeepEnd))
-            XCTAssertEqual(TeachingPolicy.help(language: language), TeachingPolicy.help(language: language, level: .inAtTheDeepEnd))
             XCTAssertEqual(TeachingPolicy.redirect(language: language), TeachingPolicy.redirect(language: language, level: .inAtTheDeepEnd))
         }
     }
@@ -114,8 +113,6 @@ final class GuidanceTests: XCTestCase {
             XCTAssertTrue(prompt.contains(language.writingGuidance), language.id)
             XCTAssertTrue(TeachingPolicy.greeting(language: language, level: .startingOut, meaningLanguage: meaning)
                 .contains("Greet the learner in \(meaning)"), language.id)
-            XCTAssertTrue(TeachingPolicy.help(language: language, level: .startingOut, meaningLanguage: meaning)
-                .contains("Explain the last idea simply in \(meaning)"), language.id)
             XCTAssertTrue(TeachingPolicy.typedReply(language: language, level: .startingOut, meaningLanguage: meaning)
                 .contains("Reply in \(meaning)"), language.id)
         }
@@ -157,7 +154,6 @@ final class GuidanceTests: XCTestCase {
                 XCTAssertTrue(prompt.contains("a very brief explanation in \(meaning)"), "corrections are explained in \(meaning): \(label)")
                 XCTAssertTrue(prompt.contains("never be harder than your questions"), label)
                 XCTAssertFalse(prompt.contains("Speak ONLY \(language.name)."), label)
-                XCTAssertTrue(TeachingPolicy.help(language: language, level: .findingMyFeet, meaningLanguage: meaning).contains("Explain the last idea in \(meaning)"), label)
                 XCTAssertTrue(TeachingPolicy.delegation(language: language, level: .findingMyFeet, meaningLanguage: meaning).contains("Explain in \(meaning)"), label)
                 XCTAssertTrue(TeachingPolicy.typedReply(language: language, level: .findingMyFeet, meaningLanguage: meaning).contains("explain it in \(meaning)"), label)
                 XCTAssertTrue(TeachingPolicy.redirect(language: language, level: .findingMyFeet, meaningLanguage: meaning)
@@ -193,11 +189,27 @@ final class GuidanceTests: XCTestCase {
         XCTAssertEqual(TeachingPolicy.focusStage(LearnerState(challenge: -3, observationCount: 0, nextGoal: "", capabilities: [], words: []), level: .inAtTheDeepEnd), 0)
     }
 
-    func testThePaceIsAskedForInWordsAsWellAsSentToTheProvider() {
+    /// GPT-Live has no speed setting, so the pace exists only as words in the prompt.
+    func testThePaceIsAskedForInWords() {
         XCTAssertTrue(voice(.startingOut, pace: .slow).contains("Speak slowly."))
         XCTAssertTrue(voice(.findingMyFeet, pace: .gentle).contains("a little more slowly than usual"))
         XCTAssertTrue(voice(.inAtTheDeepEnd, pace: .natural).contains("natural, unhurried pace"))
         XCTAssertTrue(voice(.inAtTheDeepEnd, pace: .brisk).contains("natural, lively pace"))
+    }
+
+    /// A pace chosen during a conversation is sent as the same rule the opening prompt carries,
+    /// and names no language, so it reads the same in every module.
+    func testAPaceChangeMidConversationCarriesTheSameRuleForEveryModule() {
+        let names = LanguageRegistry.all.map(\.name)
+        for pace in SpeechPace.allCases {
+            let change = TeachingPolicy.paceChange(pace)
+            XCTAssertTrue(change.hasPrefix("The learner has just changed how quickly they want you to speak. From now on: "), pace.rawValue)
+            let rule = String(change.dropFirst("The learner has just changed how quickly they want you to speak. From now on: ".count))
+            for language in LanguageRegistry.all {
+                XCTAssertTrue(voice(.inAtTheDeepEnd, language: language, pace: pace).contains(rule), "\(language.id) \(pace.rawValue)")
+            }
+            for name in names { XCTAssertFalse(change.contains(name), "\(pace.rawValue) \(name)") }
+        }
     }
 
     func testEveryLevelKeepsTheOtherModuleOutOfItsPrompts() throws {
@@ -206,7 +218,6 @@ final class GuidanceTests: XCTestCase {
             for level in GuidanceLevel.allCases {
                 let prompts = [voice(level, language: language),
                                TeachingPolicy.greeting(language: language, level: level, meaningLanguage: meaning),
-                               TeachingPolicy.help(language: language, level: level, meaningLanguage: meaning),
                                TeachingPolicy.redirect(language: language, level: level, meaningLanguage: meaning),
                                TeachingPolicy.typedReply(language: language, level: level, meaningLanguage: meaning),
                                TeachingPolicy.delegation(language: language, level: level, meaningLanguage: meaning),

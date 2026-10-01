@@ -52,8 +52,8 @@ public enum TeachingPolicy {
         min(level.maximumChallenge, 5, max(0, learner.challenge))
     }
 
-    /// Words alone, because the provider applies the pace setting to the generated audio
-    /// afterwards rather than to how the model composes speech.
+    /// The only way to set the pace: GPT-Live has no speed setting for its voice, so Mural is
+    /// asked in words and the result is the model's to deliver.
     private static func paceRule(_ pace: SpeechPace) -> String {
         switch pace {
         case .slow: "Speak slowly. Keep sentences short, pause clearly between phrases, and leave long gaps for the learner to answer."
@@ -117,16 +117,6 @@ public enum TeachingPolicy {
             return "Begin this new conversation now, without waiting for the learner to speak. \(scene) Greet the learner briefly in \(language.name) and move straight into the situation. \(way) Ask one short, natural question tied to it; do not open with a lesson on how to say hello. Then pause and listen. All speech must be in \(language.name)."
         }
     }
-    public static func help(language: LanguageModule, level: GuidanceLevel = .inAtTheDeepEnd, meaningLanguage: String = "English") -> String {
-        switch level {
-        case .startingOut:
-            "The learner asks for help. Explain the last idea simply in \(meaningLanguage). Say the \(language.name) phrase again slowly, break it into its parts, and invite them to try it. Then wait for a reply."
-        case .findingMyFeet:
-            "The learner asks for help. Explain the last idea in \(meaningLanguage) in one or two short sentences, including what the key \(language.name) words mean. Then say the \(language.name) phrase again slowly and ask a simpler question, with a possible answer they can copy. Then wait for a reply."
-        case .inAtTheDeepEnd:
-            "The learner asks for help. Restate the last idea more simply and slowly in \(language.name), with one concrete example. Then wait for a reply."
-        }
-    }
     public static func redirect(language: LanguageModule, level: GuidanceLevel = .inAtTheDeepEnd, meaningLanguage: String = "English") -> String {
         switch level {
         case .findingMyFeet:
@@ -135,10 +125,13 @@ public enum TeachingPolicy {
             "Return to \(language.name). Briefly restate the last idea in \(language.name) and continue ONLY in \(language.name). The learner may reply in any language; your speech must stay in \(language.name)."
         }
     }
-    /// Sent when the learner changes level during a conversation. The pace setting cannot
-    /// change mid-session, so only the language balance moves here.
+    /// Sent when the learner changes level during a conversation.
     public static func levelChange(language: LanguageModule, level: GuidanceLevel, meaningLanguage: String) -> String {
         "The learner has just changed how much support they want. From now on: \(speechRule(level, language: language, meaningLanguage: meaningLanguage))"
+    }
+    /// Sent when the learner changes speaking pace during a conversation.
+    public static func paceChange(_ pace: SpeechPace) -> String {
+        "The learner has just changed how quickly they want you to speak. From now on: \(paceRule(pace))"
     }
     public static func shouldRedirectSpeech(language: LanguageModule, detectedLanguageID: String, confidence: Double) -> Bool {
         let detected = detectedLanguageID.replacingOccurrences(of: "_", with: "-").lowercased()

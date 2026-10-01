@@ -16,7 +16,9 @@ A native iPhone app for learning a language by talking to it. You speak to an an
 it replies only in the language you are learning, optional subtitles show the meaning, and
 words you actually use are tracked with one to three recall bars and brought back in later
 conversations. The bars drive scheduling only; there is no Words tab, so the learner never
-browses a word list. Past conversations live in Settings. The tagline is "the language app you eventually delete."
+browses a word list. Past conversations live in Settings, and are the only place to read a whole
+conversation: the Talk screen has no transcript, no typing and no help button, so talking is the
+one way in. The tagline is "the language app you eventually delete."
 
 It teaches **Korean** and **Japanese**. The interface itself is always English.
 
@@ -40,8 +42,9 @@ the device, and no account. Conversations, vocabulary and progress live in Swift
 phone; the API key lives in the Keychain.
 
 Two models: `gpt-live-1` for realtime voice over WebRTC (`LiveTransport.swift`) and
-`gpt-5.6-luna` for translation, lookup, typed replies, delegated facts and post-turn
-assessment (`APIClient.swift`).
+`gpt-5.6-luna` for translation, lookup, delegated facts and post-turn assessment
+(`APIClient.swift`). Typed turns (`sendTyped`) survive only in Debug builds, for the device
+verification harnesses that script replies without a microphone.
 
 `gpt-realtime-2.1-mini` was offered briefly as a cheaper, token-billed voice and removed after
 it tested worse in real conversations: it does not cancel its own echo, so it answered its own
@@ -102,11 +105,14 @@ target language, and then more simply than what it explains. `GuidanceLevel.maxi
 caps the `teachingFocus` stage the voice prompt reaches for, so a learner who asked for support
 does not meet advanced grammar because the assessed challenge rose.
 
-`SpeechPace` maps four named paces onto the provider's `session.audio.output.speed`, which
-accepts 0.25–1.5, defaults to 1.0, and can only change between model turns — so Mural sends it
-once when the session is created and a new pace waits for the next conversation. It is applied
-to the generated audio afterwards, not to how the model composes speech, so `TeachingPolicy`
-asks for matching pacing in words as well. Do not describe it as changing the model's delivery.
+`SpeechPace` is an instruction and nothing else. GPT-Live takes only a `voice` under
+`session.audio.output` and rejects `session.audio.output.speed` as an unknown parameter (seen
+live, 1 October 2026), so Mural sends no speed. `TeachingPolicy` asks for the pace in words when
+the session is created, and `TeachingPolicy.paceChange` appends it when the learner changes pace
+mid-conversation, as a level change does. How closely the model follows it is the model's; do not
+describe it as changing the voice's playback speed. `SpeechPace.speed` remains the stored form
+(`Preferences.speechSpeed`, so backups decode) and sets the rate of the system voice that reads
+scans aloud. Do not send it to the live session again without a session create that accepts it.
 
 The level changes prompts only. `LearningEngine.validate` never sees it, and a beginner
 repeating a phrase Mural has just said is still downgraded to `assisted`.
@@ -222,7 +228,10 @@ paused in the background, while closing and under Reduce Motion. Static parts go
 `Geometry.flattened` (`flattenedClone()`), and foliage and grass are each one merged mesh of
 cut-out cards that sway in a GPU shader modifier, so detail costs triangles, not draw calls. A module without a
 landmark, or with an ID the app does not know, shows the orb. Keep a new scene to a few hundred
-nodes' worth of simple geometry; this view is on screen for whole conversations.
+nodes' worth of simple geometry; this view is on screen for whole conversations. It keeps one
+size throughout: once a conversation starts the words fill the stage in front of it and the
+figure stays where it is, blurred and dimmed into a backdrop (`TalkView.stage`), rather than
+shrinking to make room.
 
 Every island is turf only (`Geometry.island`): a rounded slab of grass and its blades, with no
 rock or soil under it. Every scene shares one light, `Sunrise`: when the scene appears the sun
