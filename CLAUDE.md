@@ -217,8 +217,10 @@ Two fields carry everything script-specific:
 
 A third field is visual: `landmarkID` names the 3D scene the Talk screen floats instead of the
 orb (`App/Landmarks.swift`: a hexagonal pavilion beside a weeping cherry, and a torii beside a
-small pagoda). Scenes are procedural SceneKit geometry, no model files: flat-shaded, no shadows,
-30 fps, and paused in the background, while closing and under Reduce Motion. A module without a
+small pagoda). Scenes are procedural SceneKit geometry, no model files: no shadows, 30 fps, and
+paused in the background, while closing and under Reduce Motion. Static parts go through
+`Geometry.flattened` (`flattenedClone()`), and foliage and grass are each one merged mesh of
+cut-out cards that sway in a GPU shader modifier, so detail costs triangles, not draw calls. A module without a
 landmark, or with an ID the app does not know, shows the orb. Keep a new scene to a few hundred
 nodes' worth of simple geometry; this view is on screen for whole conversations.
 
