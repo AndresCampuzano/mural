@@ -660,3 +660,19 @@ and under Reduce Motion. A module without a known `landmarkID` shows the orb.
 - Both scenes checked by screenshot on an iPhone 17 simulator.
 - **Not measured:** frame time, battery or thermal cost on a device. The scene is small by design,
   but no profiling was run.
+
+## More detailed, larger landmarks (30 September 2026)
+
+The landmarks are 30% larger on the Talk screen and framed closer. Trees now carry real foliage:
+hundreds of cut-out blossom, maple-leaf and needle cards per tree in one mesh each, over a soft
+core, with weeping strands on the cherry. Both islands are carpeted with about 1,500 grass blades
+and a scattering of flowers, kept off stone and paths, and ringed with rocks; grass and leaves
+sway on the GPU through a shader modifier. The pavilion gained tiled roof rows, round end tiles,
+a railing, brackets, painted dancheong motifs, stone-block courses, cheek walls on the stairs and
+a small pine. The torii gained top rings, a gold-framed plaque, stepping stones and a second
+lantern; the pagoda gained windows, balcony rails, corner bells and a jewel atop the spire.
+Static parts are flattened with `flattenedClone()`, so each scene stays at a few dozen draw calls
+and roughly ten thousand triangles.
+
+- Both scenes checked by screenshot on an iPhone 17 simulator; installed on the iPhone and iPad.
+- **Not measured:** frame time, battery or thermal cost on a device.

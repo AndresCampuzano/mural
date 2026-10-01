@@ -235,12 +235,15 @@ private struct OrbPanel: View {
     /// Full size while the orb is the whole screen, and smaller once a conversation is running,
     /// where the caption and the phrases worth keeping need the room more than it does.
     private var size: CGSize {
-        switch (coordinator.isRunning, typeSize.isAccessibilitySize) {
+        // A landmark is a whole scene rather than a single shape, so it is given more room.
+        let scale: CGFloat = coordinator.language.landmarkID.flatMap { Landmarks.all[$0] } == nil ? 1 : 1.3
+        let base: CGSize = switch (coordinator.isRunning, typeSize.isAccessibilitySize) {
         case (true, true): CGSize(width: 120, height: 128)
         case (true, false): CGSize(width: 150, height: 152)
         case (false, true): CGSize(width: 170, height: 180)
         case (false, false): CGSize(width: 220, height: 222)
         }
+        return CGSize(width: base.width * scale, height: base.height * scale)
     }
     var body: some View {
         VStack(spacing: 0) {
