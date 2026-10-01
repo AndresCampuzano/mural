@@ -13,6 +13,26 @@ import MuralCore
     }
     static var tab: Int { screen == .themes ? 1 : 0 }
 
+    /// A scan with a saved test whose questions are all choices, so a test can be taken and
+    /// marked without an API key. Built from the current module, so it works in every language.
+    /// `RootView.init` can run again when the app's body is re-evaluated, so the seed is kept to
+    /// once per launch; otherwise deleting the last scan would bring it straight back.
+    private static var seededScan = false
+    static func seedScan(_ store: LearningStore) {
+        guard !seededScan else { return }
+        seededScan = true
+        let language = store.language
+        let study = PictureStudy.validated(.init(title: "Café menu", summary: "A small café menu with drinks and prices.", targetText: language.greeting,
+                                                 vocabulary: [PictureTerm(text: language.greetingWord, meaning: "hello")], situation: "Ordering at a café."),
+                                           language: language, meaningLanguage: store.preferences.meaningLanguage)
+        var scan = ScannedFile(languageID: language.id, name: "Café menu", kind: .picture, detail: "Picture", study: study)
+        scan.add(SavedPractice(name: "Menu quiz", activity: .writtenTest, level: .startingOut, questions: [
+            TestQuestion(kind: .choice, prompt: "What does this mean?", passage: language.greetingWord, options: ["hello", "goodbye"], answer: "hello", explanation: ""),
+            TestQuestion(kind: .choice, prompt: "Which one is the greeting?", passage: "", options: [language.greetingWord, "—"], answer: language.greetingWord, explanation: "")
+        ]))
+        store.saveScan(scan)
+    }
+
     /// Conversations over the last few months on both voice models, so Spending has bars to draw.
     static func seedSpending(_ store: LearningStore) {
         let calendar = Calendar.current

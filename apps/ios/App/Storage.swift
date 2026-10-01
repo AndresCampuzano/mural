@@ -100,6 +100,22 @@ import MuralCore
         archive.savedPhrases = kept; persist()
     }
     func deletePhrase(_ id: UUID) { archive.savedPhrases = archive.phrases.filter { $0.id != id }; persist() }
+    /// Pictures and PDFs read for the current language, newest first.
+    var scans: [ScannedFile] { archive.scannedFiles.filter { $0.languageID == language.id }.sorted { $0.createdAt > $1.createdAt } }
+    func scan(_ id: UUID) -> ScannedFile? { archive.scannedFiles.first { $0.id == id } }
+    func saveScan(_ scan: ScannedFile) {
+        var kept = archive.scannedFiles
+        if let index = kept.firstIndex(where: { $0.id == scan.id }) { kept[index] = scan } else { kept.append(scan) }
+        if kept.count > Archive.maximumScans { kept.removeFirst(kept.count - Archive.maximumScans) }
+        archive.scans = kept; persist()
+    }
+    func updateScan(_ id: UUID, _ change: (inout ScannedFile) -> Void) {
+        guard var scan = scan(id) else { return }
+        change(&scan); saveScan(scan)
+    }
+    /// Removes everything read from the file, its thumbnail, its practice and its attempts.
+    /// Only the content-free usage record stays, so Spending still counts what was paid.
+    func deleteScan(_ id: UUID) { archive.scans = archive.scannedFiles.filter { $0.id != id }; persist() }
     func correctPassage(sessionID: UUID, passageID: String, text: String) {
         guard let index = archive.sessions.firstIndex(where: { $0.id == sessionID }),
               let passage = archive.sessions[index].passages.first(where: { $0.id == passageID && $0.speaker == .user }) else { return }
@@ -119,7 +135,7 @@ import MuralCore
             }
         }
         archive.sessions.forEach { onSessionInvalidation?($0.id) }
-        archive.sessions = []; archive.preferences.hiddenWords = []; archive.savedPhrases = nil; persist()
+        archive.sessions = []; archive.preferences.hiddenWords = []; archive.savedPhrases = nil; archive.scans = nil; persist()
     }
     func exportData() throws -> Data { try archive.encoded() }
     func importData(_ data: Data) throws {

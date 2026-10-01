@@ -599,3 +599,21 @@ model in one batch, and a reply that does not line up marks nothing. Tests never
 - **Not verified:** reading a real picture or PDF, generating or marking a test, or a picture
   conversation, because no API key was used in this session. That `gpt-5.6-luna` accepts
   `input_image` and `input_file` in this form has not been confirmed by a live request.
+
+## Scans: read once, use often (30 September 2026)
+
+Pictures and PDFs are read once and kept as text in `Archive.scans` with a small thumbnail, never
+the file. Each scan keeps its practice: a conversation keeps its level and pace, a written test
+keeps its questions and every attempt. Scans and practices can be renamed and deleted; deleting a
+scan removes its text, thumbnail, tests and attempts, while a content-free usage record keeps its
+cost for Spending. The written test no longer offers a speaking pace. The listen button now claims
+a playback audio session before speaking and falls back to any installed voice for the language.
+
+- **140 core tests passed**, including 10 new `ScanTests` (backup round trip in every language,
+  pre-scan backups, import merge, limits, renaming, attempts, unknown stored levels).
+- **Full native UI suite passed (26 tests)** on an iPhone 17 simulator, including 2 new ones: the new-scan sheet sends nothing, and a
+  seeded scan's saved test is taken twice (marked locally), then the scan is renamed and deleted;
+  the written test hides the pace picker.
+- **Not verified:** that the listen button now makes sound on the iPad. The audio-session change
+  addresses the likely cause and has not been heard on a device. A live scan, test generation and
+  model marking remain unverified, as before.

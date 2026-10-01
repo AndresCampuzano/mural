@@ -16,6 +16,9 @@ struct RootView: View {
         if ProcessInfo.processInfo.arguments.contains("--preview"), ProcessInfo.processInfo.arguments.contains("--preview-spending") {
             ScreenshotPreview.seedSpending(store)
         }
+        if ProcessInfo.processInfo.arguments.contains("--preview"), ProcessInfo.processInfo.arguments.contains("--preview-scan"), store.scans.isEmpty {
+            ScreenshotPreview.seedScan(store)
+        }
         _tab = State(initialValue: ScreenshotPreview.tab)
         #endif
         _coordinator = State(initialValue: coordinator)
@@ -25,11 +28,12 @@ struct RootView: View {
         TabView(selection: $tab) {
             Tab("Talk", systemImage: "waveform", value: 0) { shell { TalkView(coordinator: coordinator) { tab = 3 } } }
             Tab("Themes", systemImage: "square.grid.2x2", value: 1) {
-                shell { ThemesView(coordinator: coordinator) { theme in coordinator.chooseTheme(theme); tab = 0 } }
+                shell { ThemesView(coordinator: coordinator, choose: { theme in coordinator.chooseTheme(theme); tab = 0 }, openScans: { tab = 4 }) }
                     // A course screen belongs to one language, so a switch starts the tab from the top.
                     .id(coordinator.language.id)
             }
             Tab("Phrases", systemImage: "bookmark", value: 3) { shell { PhrasesView(coordinator: coordinator) } }
+            Tab("Scans", systemImage: "doc.text.viewfinder", value: 4) { shell { ScansView(coordinator: coordinator) { tab = 0 } } }
         }
         .tint(MuralColor.ink)
         .sheet(isPresented: $coordinator.showSettings) { SettingsView(coordinator: coordinator) }
